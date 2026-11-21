@@ -12,6 +12,9 @@ export async function resetDb() {
   await prisma.ticket.deleteMany();
   await prisma.routingRule.deleteMany();
   await prisma.officerSession.deleteMany();
+  await prisma.citizenSession.deleteMany();
+  await prisma.otpChallenge.deleteMany();
+  await prisma.citizen.deleteMany();
   await prisma.officer.deleteMany();
   await prisma.department.deleteMany();
   const roads = await prisma.department.create({ data: { code: "ROADS", name: "Roads Maintenance" } });

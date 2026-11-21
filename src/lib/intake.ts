@@ -36,7 +36,7 @@ export class IntakeError extends Error {
 
 export type IntakeResult = { reference: string; token: string; duplicate: boolean };
 
-export async function createReportFromForm(form: FormData): Promise<IntakeResult> {
+export async function createReportFromForm(form: FormData, citizenId: string | null = null): Promise<IntakeResult> {
   const raw = Object.fromEntries(
     ["idempotencyKey", "text", "locationText", "locationSource", "locationConfirmed", "lat", "lng", "placeId"].map((k) => [k, form.get(k)?.toString() ?? undefined]),
   );
@@ -115,6 +115,7 @@ export async function createReportFromForm(form: FormData): Promise<IntakeResult
             locationSource: source,
             locationConfirmed: confirmed,
             locationPlaceId: f.placeId || null,
+            citizenId,
           },
         });
         await enqueueTriage(tx, id);

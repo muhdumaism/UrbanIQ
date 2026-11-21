@@ -16,7 +16,7 @@
   <img alt="Claude" src="https://img.shields.io/badge/AI_triage-Claude-D97757" />
   <img alt="YOLO" src="https://img.shields.io/badge/Vision-YOLO11n_(advisory)-FF6B00" />
   <img alt="Google Maps" src="https://img.shields.io/badge/Maps-Google_Maps_%2B_Places-34A853?logo=googlemaps&logoColor=white" />
-  <img alt="Tests" src="https://img.shields.io/badge/checks-43_unit_·_67_UI_·_6_vision-2EA44F" />
+  <img alt="Tests" src="https://img.shields.io/badge/checks-55_unit_·_78_UI_·_6_vision-2EA44F" />
 </p>
 
 <p align="center">
@@ -93,6 +93,8 @@ flowchart LR
 - 📍 Choose a location with Google Places search, by dropping or dragging a pin, or with *Use my location*. If maps or location permission fail, typing a landmark always works.
 - ✅ Explicit location confirmation before submission. The draft is saved locally if anything fails.
 - 🔗 A private, unguessable tracking link with a status timeline, department, resolution note, answers to the city's questions, and location corrections.
+
+- 📱 **Optional mobile sign-in.** Citizens can sign in with an Indian mobile number and a one-time SMS code to keep all their reports under **My reports**. Reporting without an account still works.
 
 **For officers**
 - 📍 **Your area first.** The dashboard detects where the officer is working from (browser location, never sent to the server), centres the map there, shows each ticket's distance and filters to *within 2 / 5 / 10 / 25 km of me*.
@@ -183,6 +185,27 @@ A private CPU FastAPI service in [`vision/`](vision/). It maps detector classes 
 VISION_URL="http://urbaniq-vision:8000"   # private network only
 VISION_TOKEN="…"                          # same value on both services
 ```
+</details>
+
+<details>
+<summary><b>📱 Citizen SMS sign-in (MSG91 / Twilio)</b></summary>
+
+```env
+SMS_PROVIDER="msg91"            # or "twilio"
+MSG91_AUTH_KEY="…"
+MSG91_TEMPLATE_ID="…"           # DLT-approved OTP template containing ##OTP##
+```
+
+* Codes are 6 digits, valid for 5 minutes and single use, with 5 attempts per code.
+* Sending is limited to 3 codes per number every 10 minutes, with a 30-second resend cooldown.
+* Only an HMAC of each code is stored.
+* With `SMS_PROVIDER=console`, demo mode shows the code on screen, and production refuses to send.
+</details>
+
+<details>
+<summary><b>🩺 Is YOLO working? System status</b></summary>
+
+Officers can open **Status** (top-right of the dashboard, `/officer/system`). It shows the triage engine, whether the YOLO service is reachable and has its model loaded, and whether SMS is configured. It also has a **Test the photo detector** upload, which shows exactly what YOLO detects in any photo, with boxes and confidence. Nothing is saved.
 </details>
 
 <details>
@@ -277,10 +300,11 @@ This deletes every report, ticket and photo, and keeps departments, routing rule
 
 | Suite | Command | Result |
 | --- | --- | --- |
-| Unit + integration (severity order, ward routing, duplicate linking under concurrency, access control, vision handling) | `npm test` | **43 / 43** |
+| Unit + integration (severity order, ward routing, duplicate linking under concurrency, access control, vision handling) | `npm test` | **55 / 55** |
 | Core UI flows: pothole → High/Roads, duplicate linking, Critical wire + urgent review, photo-only, officer lifecycle, access control, mobile | `node verification/e2e.mjs` | **27 / 27** |
 | Maps + vision UI flows: all five detector types, no-vision model, location permission denied, ward match, out-of-area, Maps unavailable, pin ↔ queue sync | `node verification/e2e-maps-vision.mjs` | **25 / 25** |
 | India profile: region-restricted search, out-of-India rejection, officer location + distance filter, heatmap | `node verification/e2e-india.mjs` | **15 / 15** |
+| Citizen mobile sign-in, My reports, officer system status + detector test | `node verification/e2e-citizen.mjs` | **11 / 11** |
 | Vision service (fake model): mapping, auth, missing model, checksum pin, class-map mismatch | `cd vision && pytest -q` | **6 / 6** |
 | Typecheck, lint, production build | `npm run typecheck && npm run lint && npm run build` | ✔ |
 

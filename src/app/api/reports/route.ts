@@ -4,6 +4,7 @@ import { runPendingJobs } from "@/lib/jobs";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { jsonError, sameOrigin, serverError } from "@/lib/http";
 import { trackingUrl } from "@/lib/tokens";
+import { currentCitizen } from "@/lib/citizen-auth";
 
 export const runtime = "nodejs";
 const MAX_BODY = 11 * 1024 * 1024;
@@ -22,7 +23,8 @@ export async function POST(req: Request) {
     return jsonError(400, "We couldn't read the submission. Please try again.");
   }
   try {
-    const result = await createReportFromForm(form);
+    const citizen = await currentCitizen();
+    const result = await createReportFromForm(form, citizen?.id ?? null);
     void runPendingJobs(); // kick the durable worker; it also polls on its own
     return NextResponse.json(
       { reference: result.reference, token: result.token, trackingUrl: trackingUrl(result.token), duplicate: result.duplicate },

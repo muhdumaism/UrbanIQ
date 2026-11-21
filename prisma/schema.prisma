@@ -182,6 +182,9 @@ model Report {
   severityReason    String?
   ticketId          String?
   ticket            Ticket?        @relation(fields: [ticketId], references: [id])
+  /// Set when the citizen was signed in (mobile OTP) while reporting. Reports can still be anonymous.
+  citizenId         String?
+  citizen           Citizen?       @relation(fields: [citizenId], references: [id], onDelete: SetNull)
   linkType          LinkType?
   /// Seeded illustrative data (labelled "Sample" in the UI)
   isSample          Boolean        @default(false)
@@ -193,6 +196,7 @@ model Report {
   events            TicketEvent[]
 
   @@index([ticketId])
+  @@index([citizenId])
 }
 
 model Ticket {
@@ -312,4 +316,36 @@ model Job {
 model Counter {
   name  String @id
   value Int
+}
+
+/// Citizen account identified only by a verified Indian mobile number (E.164, e.g. +919812345678).
+model Citizen {
+  id          String           @id @default(cuid())
+  phone       String           @unique
+  createdAt   DateTime         @default(now())
+  lastLoginAt DateTime?
+  sessions    CitizenSession[]
+  reports     Report[]
+}
+
+model CitizenSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  citizenId String
+  citizen   Citizen  @relation(fields: [citizenId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+/// One-time sign-in code. Only an HMAC of the code is stored.
+model OtpChallenge {
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, createdAt])
 }
