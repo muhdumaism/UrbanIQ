@@ -1,8 +1,8 @@
 "use client";
 import type { QueueRow } from "@/lib/officer";
-import { subtypeLabel, type TicketStatusCode } from "@/lib/taxonomy";
+import { SEVERITY_LABEL, STATUS_LABEL, type TicketStatusCode } from "@/lib/taxonomy";
 import { timeAgo } from "@/lib/format";
-import { SampleTag, SeverityBadge, StatusBadge } from "../Badges";
+import { PIN_STYLE } from "./pins";
 
 export function QueueList({
   state,
@@ -14,6 +14,8 @@ export function QueueList({
   onHover,
   onRetry,
   filtered,
+  distances,
+  onClear,
 }: {
   state: "loading" | "ready" | "error";
   rows: QueueRow[];
@@ -24,20 +26,22 @@ export function QueueList({
   onHover: (id: string | null) => void;
   onRetry: () => void;
   filtered: boolean;
+  distances?: Map<string, number>;
+  onClear?: () => void;
 }) {
   if (state === "loading")
     return (
       <div className="space-y-2 p-3" aria-busy="true" aria-label="Loading tickets">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-[88px] animate-pulse rounded-xl bg-surface" />
+          <div key={i} className="h-14 animate-pulse rounded-lg bg-paper" />
         ))}
       </div>
     );
   if (state === "error")
     return (
-      <div role="alert" className="m-4 rounded-xl border border-[#e7b7b5] bg-crit-soft p-4 text-sm text-crit">
-        <p className="font-medium">Couldn&apos;t load the queue.</p>
-        <button className="btn-outline btn-sm mt-3" onClick={onRetry}>
+      <div role="alert" className="m-3 rounded-lg bg-crit-soft p-3 text-[13px] text-crit">
+        Couldn&apos;t load tickets.{" "}
+        <button className="underline" onClick={onRetry}>
           Retry
         </button>
       </div>
@@ -45,53 +49,54 @@ export function QueueList({
 
   const urgent = rows.filter((r) => r.urgentReview);
   const rest = rows.filter((r) => !r.urgentReview);
-  const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 } as Record<string, number>;
-  rows.forEach((r) => counts[r.severity]++);
 
   return (
-    <div>
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-line bg-paper/95 px-4 py-2.5 text-xs text-muted backdrop-blur">
-        <span>
-          <strong className="text-ink">{rows.length}</strong> tickets · sorted by severity, then oldest
-        </span>
-        <span className="flex gap-2">
-          {processing > 0 && <span className="chip border-line-strong bg-surface text-ink-2">⟳ {processing} processing</span>}
-          {failed > 0 && <span className="chip border-[#e7b7b5] bg-crit-soft text-crit">{failed} AI failed</span>}
-        </span>
-      </div>
-      <p className="sr-only" aria-live="polite">
-        {counts.CRITICAL} critical, {counts.HIGH} high, {counts.MEDIUM} medium, {counts.LOW} low.
-      </p>
+    <div className="pb-2">
+      {(processing > 0 || failed > 0) && (
+        <p className="px-3 pt-2 text-[12px] text-muted">
+          {processing > 0 && `${processing} report${processing === 1 ? "" : "s"} processing`}
+          {processing > 0 && failed > 0 && " · "}
+          {failed > 0 && <span className="text-crit">{failed} AI failed</span>}
+        </p>
+      )}
 
       {rows.length === 0 && (
-        <div className="p-8 text-center">
-          <p className="font-medium">{filtered ? "No tickets match these filters." : "No open tickets. Nice."}</p>
-          <p className="mt-1 text-sm text-muted">{filtered ? "Try clearing a filter." : "New reports appear here automatically."}</p>
+        <div className="p-6 text-center text-[13px]">
+          <p className="font-medium">{filtered ? "No tickets match." : "No open tickets."}</p>
+          {filtered ? (
+            onClear && (
+              <button className="mt-1 text-muted underline" onClick={onClear}>
+                Clear filters
+              </button>
+            )
+          ) : (
+            <p className="mt-1 text-muted">New reports appear here automatically.</p>
+          )}
         </div>
       )}
 
       {urgent.length > 0 && (
-        <div className="border-b-2 border-crit bg-crit-soft/60">
-          <h2 className="flex items-center gap-2 px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wider text-crit">
-            <span aria-hidden="true">▲</span> Urgent review · {urgent.length}
-          </h2>
-          <ul className="space-y-1.5 p-2 pt-1">
+        <>
+          <h2 className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-crit">Urgent review · {urgent.length}</h2>
+          <ul>
             {urgent.map((r) => (
-              <Row key={r.id} r={r} selected={r.id === selectedId} onSelect={onSelect} onHover={onHover} />
+              <Row key={r.id} r={r} selected={r.id === selectedId} onSelect={onSelect} onHover={onHover} km={distances?.get(r.id)} />
             ))}
           </ul>
-        </div>
+          {rest.length > 0 && <h2 className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wider text-muted">All tickets</h2>}
+        </>
       )}
-      <ul className="space-y-1.5 p-2" aria-label="Tickets">
+      <ul aria-label="Tickets">
         {rest.map((r) => (
-          <Row key={r.id} r={r} selected={r.id === selectedId} onSelect={onSelect} onHover={onHover} />
+          <Row key={r.id} r={r} selected={r.id === selectedId} onSelect={onSelect} onHover={onHover} km={distances?.get(r.id)} />
         ))}
       </ul>
     </div>
   );
 }
 
-function Row({ r, selected, onSelect, onHover }: { r: QueueRow; selected: boolean; onSelect: (id: string) => void; onHover: (id: string | null) => void }) {
+function Row({ r, selected, onSelect, onHover, km }: { r: QueueRow; selected: boolean; onSelect: (id: string) => void; onHover: (id: string | null) => void; km?: number }) {
+  const where = r.lat == null ? null : (r.locationText ?? r.ward ?? "Pinned location");
   return (
     <li>
       <button
@@ -102,42 +107,42 @@ function Row({ r, selected, onSelect, onHover }: { r: QueueRow; selected: boolea
         onFocus={() => onHover(r.id)}
         onBlur={() => onHover(null)}
         aria-current={selected ? "true" : undefined}
-        className={`group block w-full rounded-xl border px-3.5 py-3 text-left transition-colors ${selected ? "border-ink bg-surface shadow-[0_0_0_1px_var(--color-ink)]" : "border-line bg-surface hover:border-line-strong"} ${r.status === "RESOLVED" ? "opacity-70" : ""}`}
+        className={`flex w-full gap-2.5 border-l-[3px] px-3 py-2.5 text-left transition-colors ${selected ? "border-ink bg-paper" : "border-transparent hover:bg-paper/70"} ${r.status === "RESOLVED" ? "opacity-60" : ""}`}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-2">
-            <SeverityBadge severity={r.severity} size="sm" />
-            <span className="font-mono text-xs text-muted">{r.reference}</span>
-            {r.isSample && <SampleTag />}
-            {r.needsReevaluation && r.status !== "RESOLVED" && <span className="chip h-5 border-[#c9d6e5] bg-low-soft px-1.5 text-[10px] text-low">Updated</span>}
-            {r.pendingSuggestions > 0 && <span className="chip h-5 border-line-strong px-1.5 text-[10px] text-ink-2" title="Possible duplicate needs a decision">Possible dup</span>}
-          </div>
-          <span className="shrink-0 text-xs text-muted" title={new Date(r.createdAt).toLocaleString()}>
-            {timeAgo(r.createdAt)}
-          </span>
-        </div>
-        <p className="mt-1.5 truncate text-[15px] font-medium leading-snug">{r.title}</p>
-        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
-          <span className="truncate">{subtypeLabel(r.subtype)}</span>
-          {r.lat != null ? (
-            <span className="truncate">⌖ {r.locationText ?? r.ward}{r.ward && r.locationText ? ` · ${r.ward.split(" · ")[0]}` : ""}</span>
-          ) : (
-            <span className="font-medium text-med">⌖ Location missing</span>
-          )}
-        </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <StatusBadge status={r.status as TicketStatusCode} />
-          {r.department ? (
-            <span className="chip border-line bg-paper text-ink-2">{r.department}</span>
-          ) : (
-            <span className="chip border-dashed border-crit bg-surface text-crit">Unassigned</span>
-          )}
-          {r.reportCount > 1 && (
-            <span className="chip border-line bg-paper text-ink-2" title="Citizen reports linked to this ticket">
-              {r.reportCount} reports
+        <span className="mt-[5px] h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: PIN_STYLE[r.severity].bg }} aria-hidden="true" />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline justify-between gap-2">
+            <span className="truncate text-[14px] font-medium">{r.title}</span>
+            <span className="shrink-0 text-[12px] text-muted" title={new Date(r.createdAt).toLocaleString()}>
+              {timeAgo(r.createdAt)}
             </span>
-          )}
-        </div>
+          </span>
+          <span className="mt-0.5 flex items-center gap-1.5 truncate text-[12px] text-muted">
+            <span className={r.severity === "CRITICAL" ? "font-medium text-crit" : ""}>{SEVERITY_LABEL[r.severity]}</span>
+            <span aria-hidden="true">·</span>
+            {where ? <span className="truncate">{where}</span> : <span className="text-med">Location missing</span>}
+            {km != null && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="shrink-0 text-ink-2">{km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(km < 10 ? 1 : 0)} km`} away</span>
+              </>
+            )}
+          </span>
+          <span className="mt-0.5 flex items-center gap-1.5 truncate text-[12px]">
+            <span className="text-ink-2">{STATUS_LABEL[r.status as TicketStatusCode]}</span>
+            <span aria-hidden="true" className="text-muted">
+              ·
+            </span>
+            {r.department ? <span className="truncate text-muted">{r.department}</span> : <span className="text-crit">Unassigned</span>}
+            {r.reportCount > 1 && <span className="shrink-0 text-muted">· {r.reportCount} reports</span>}
+            {r.pendingSuggestions > 0 && <span className="shrink-0 text-muted">· possible duplicate</span>}
+            {r.isSample && (
+              <span className="shrink-0 text-muted" title="Seeded illustrative data">
+                · sample
+              </span>
+            )}
+          </span>
+        </span>
       </button>
     </li>
   );

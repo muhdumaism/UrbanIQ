@@ -21,6 +21,13 @@ const EnvSchema = z.object({
   VISION_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
   VISION_MIN_CONFIDENCE: z.coerce.number().min(0).max(1).default(0.5),
   WARDS_GEOJSON_PATH: z.string().optional(),
+  /** sample = fictional demo wards · none = no ward boundaries (any location is in the service area) */
+  WARDS_MODE: z.enum(["sample", "none"]).default("none"),
+  /** Country the service accepts reports from ("IN" = India). Empty = anywhere. */
+  SERVICE_REGION: z.enum(["IN", ""]).default("IN"),
+  /** Initial map view when there are no wards to fit, e.g. "12.9716,77.5946" */
+  MAP_DEFAULT_CENTER: z.string().regex(/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/).optional().or(z.literal("")),
+  MAP_DEFAULT_ZOOM: z.coerce.number().min(1).max(20).optional(),
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   LOCAL_STORAGE_DIR: z.string().default("./storage/uploads"),
   S3_BUCKET: z.string().optional(),

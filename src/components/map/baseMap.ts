@@ -45,7 +45,7 @@ export function webglAvailable() {
   }
 }
 
-export function createCityMap(container: HTMLElement, opts: Partial<maplibregl.MapOptions> = {}) {
+export function createCityMap(container: HTMLElement, opts: Partial<maplibregl.MapOptions> = {}, withControls = true) {
   const map = new maplibregl.Map({
     container,
     style: cityStyle(),
@@ -61,7 +61,7 @@ export function createCityMap(container: HTMLElement, opts: Partial<maplibregl.M
     ...opts,
   });
   map.touchZoomRotate.disableRotation();
-  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+  if (withControls) map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
   map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "Port Alder sample geography" }));
   // Tiles are optional: never let a tile failure break the map.
   map.on("error", (e) => {

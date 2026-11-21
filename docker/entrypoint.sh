@@ -1,5 +1,5 @@
 #!/bin/sh
-# Usage: web (default) | worker | migrate | seed | create-officer --email … --name … --role … [--department CODE]
+# Usage: web (default) | worker | migrate | seed | reset-data --yes | create-officer --email … --name … --role … [--department CODE]
 set -e
 cd /app
 
@@ -28,6 +28,10 @@ case "${1:-web}" in
   seed)
     migrate
     exec npx tsx prisma/seed.ts
+    ;;
+  reset-data)
+    shift
+    exec npx tsx scripts/reset-data.ts "$@"
     ;;
   create-officer)
     shift

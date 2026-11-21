@@ -8,6 +8,7 @@ import fs from "fs";
 import path from "path";
 import { z } from "zod";
 import { env } from "./env";
+import { REGIONS, inRegion } from "./region";
 import { LANDMARKS, WARDS, findLandmark as findSampleLandmark, pointInRing, type WardFeature } from "./geo";
 
 const Ring = z.array(z.tuple([z.number(), z.number()]).rest(z.number())).min(4);
@@ -29,16 +30,24 @@ const LandmarkFile = z.array(z.object({ name: z.string(), aliases: z.array(z.str
 
 type Polygon = [number, number][][];
 type Ward = { code: string; name: string; label: string; polygons: Polygon[] };
-type Muni = { sample: boolean; wards: Ward[]; geojson: unknown; landmarks: typeof LANDMARKS };
+type Muni = { sample: boolean; mode: "sample" | "custom" | "none"; wards: Ward[]; geojson: unknown; landmarks: typeof LANDMARKS };
 
 let cached: Muni | null = null;
 
 export function municipality(): Muni {
   if (cached) return cached;
   const p = env().WARDS_GEOJSON_PATH;
+  const lp = process.env.LANDMARKS_JSON_PATH;
+  const loadLandmarks = () => (lp ? LandmarkFile.parse(JSON.parse(fs.readFileSync(path.resolve(lp), "utf8"))) : []);
+  if (!p && env().WARDS_MODE === "none") {
+    // No ward boundaries: every pinned location is in the service area; routing uses city-wide rules.
+    cached = { sample: false, mode: "none", wards: [], geojson: { type: "FeatureCollection", features: [] }, landmarks: loadLandmarks() };
+    return cached;
+  }
   if (!p) {
     cached = {
       sample: true,
+      mode: "sample",
       wards: WARDS.features.map((f: WardFeature) => ({ code: f.properties.code, name: f.properties.name, label: f.properties.label, polygons: [f.geometry.coordinates] })),
       geojson: WARDS,
       landmarks: LANDMARKS,
@@ -47,9 +56,9 @@ export function municipality(): Muni {
   }
   const raw = JSON.parse(fs.readFileSync(path.resolve(p), "utf8"));
   const parsed = WardFile.parse(raw);
-  const lp = process.env.LANDMARKS_JSON_PATH;
   cached = {
     sample: false,
+    mode: "custom",
     wards: parsed.features.map((f) => ({
       code: f.properties.code,
       name: f.properties.name,
@@ -57,7 +66,7 @@ export function municipality(): Muni {
       polygons: (f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates) as Polygon[],
     })),
     geojson: raw,
-    landmarks: lp ? LandmarkFile.parse(JSON.parse(fs.readFileSync(path.resolve(lp), "utf8"))) : [],
+    landmarks: loadLandmarks(),
   };
   return cached;
 }
@@ -85,8 +94,24 @@ export function findLandmark(...texts: (string | null | undefined)[]) {
   return m.landmarks.find((l) => [l.name, ...l.aliases].some((a) => a.length >= 6 && hay.includes(a.toLowerCase()))) ?? null;
 }
 
-/** Public, cacheable description of the configured wards for maps. */
+/** True when ward boundaries are configured (sample or municipality-supplied). */
+export const wardsEnabled = () => municipality().mode !== "none";
+
+/** Public, cacheable description of the configured wards + default map view for maps. */
 export function wardsForClient() {
   const m = municipality();
-  return { sample: m.sample, geojson: m.geojson };
+  const e = env();
+  const region = serviceRegion();
+  const c = e.MAP_DEFAULT_CENTER ? e.MAP_DEFAULT_CENTER.split(",").map((x) => Number(x.trim())) : null;
+  const center = c ? { lat: c[0], lng: c[1] } : (region?.center ?? null);
+  const zoom = e.MAP_DEFAULT_ZOOM ?? (c ? 12 : (region?.zoom ?? 2));
+  return { sample: m.sample, mode: m.mode, geojson: m.geojson, center, zoom, region };
 }
+
+/** The configured service region (India by default), or null for "anywhere". */
+export function serviceRegion() {
+  const code = env().SERVICE_REGION;
+  return code ? REGIONS[code] : null;
+}
+
+export const inServiceRegion = (lat: number, lng: number) => inRegion(serviceRegion(), lat, lng);

@@ -295,8 +295,8 @@ export async function performAction(officer: SessionOfficer, ticketId: string, a
           data: {
             departmentId: dept.id,
             reviewReasons: reasons,
-            urgentReview: ticket.severity === "CRITICAL" ? !ticket.wardCode : false,
-            status: ticket.status === "NEEDS_REVIEW" && ticket.wardCode ? "NEW" : ticket.status === "IN_PROGRESS" ? "ACKNOWLEDGED" : ticket.status,
+            urgentReview: ticket.severity === "CRITICAL" ? ticket.lat == null : false,
+            status: ticket.status === "NEEDS_REVIEW" && ticket.lat != null ? "NEW" : ticket.status === "IN_PROGRESS" ? "ACKNOWLEDGED" : ticket.status,
           },
         }),
         prisma.ticketEvent.create({
@@ -317,7 +317,7 @@ export async function performAction(officer: SessionOfficer, ticketId: string, a
       if (a.severity === ticket.severity) throw new ActionError("Severity is already set to that level.", 409);
       const reason = `${a.reason} (corrected by ${officer.name})`;
       await prisma.$transaction([
-        prisma.ticket.update({ where: { id: ticket.id }, data: { severity: a.severity as Severity, severityReason: a.reason, urgentReview: a.severity === "CRITICAL" ? !ticket.departmentId || !ticket.wardCode : false } }),
+        prisma.ticket.update({ where: { id: ticket.id }, data: { severity: a.severity as Severity, severityReason: a.reason, urgentReview: a.severity === "CRITICAL" ? !ticket.departmentId || ticket.lat == null : false } }),
         prisma.ticketEvent.create({
           data: ev({ type: "severity_corrected", before: { severity: ticket.severity, reason: ticket.severityReason }, after: { severity: a.severity, reason: a.reason }, note: `${SEVERITY_LABEL[ticket.severity as SeverityCode]} → ${SEVERITY_LABEL[a.severity]}: ${reason}` }),
         }),
@@ -377,9 +377,9 @@ export async function performAction(officer: SessionOfficer, ticketId: string, a
     }
     case "mark_reviewed": {
       requireOpen();
-      const nextStatus: TicketStatus = ticket.status === "NEEDS_REVIEW" && ticket.departmentId && ticket.wardCode ? "NEW" : ticket.status;
+      const nextStatus: TicketStatus = ticket.status === "NEEDS_REVIEW" && ticket.departmentId && ticket.lat != null ? "NEW" : ticket.status;
       await prisma.$transaction([
-        prisma.ticket.update({ where: { id: ticket.id }, data: { needsReevaluation: false, urgentReview: ticket.departmentId && ticket.wardCode ? false : ticket.urgentReview, status: nextStatus, reviewReasons: [] } }),
+        prisma.ticket.update({ where: { id: ticket.id }, data: { needsReevaluation: false, urgentReview: ticket.departmentId && ticket.lat != null ? false : ticket.urgentReview, status: nextStatus, reviewReasons: [] } }),
         prisma.ticketEvent.create({ data: ev({ type: "reviewed", before: { status: ticket.status, reviewReasons: ticket.reviewReasons }, after: { status: nextStatus } }) }),
       ]);
       break;

@@ -6,3 +6,5 @@ process.env.RUN_INLINE_WORKER = "false";
 process.env.VISION_URL = "http://vision.test";
 process.env.VISION_TOKEN = "test-vision-token";
 process.env.VISION_MIN_CONFIDENCE = "0.5";
+process.env.WARDS_MODE = "sample";
+process.env.SERVICE_REGION = "";

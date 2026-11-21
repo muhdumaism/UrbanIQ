@@ -5,7 +5,7 @@ import type { TicketDetail } from "@/lib/officer";
 import type { SessionOfficer } from "@/lib/auth";
 import { CATEGORY_LABEL, SEVERITIES, SEVERITY_LABEL, subtypeLabel, type CategoryCode, type SeverityCode, type TicketStatusCode } from "@/lib/taxonomy";
 import { formatDateTime, timeAgoLong } from "@/lib/format";
-import { SampleTag, SeverityBadge, StatusBadge } from "../Badges";
+import { SeverityBadge } from "../Badges";
 import { MiniMap } from "../map/MiniMap";
 import { PhotoWithDetections, VisionSummary } from "./VisionEvidence";
 import { GooglePlaceName } from "../map/GooglePlaceName";
@@ -13,7 +13,22 @@ import { GooglePlaceName } from "../map/GooglePlaceName";
 type Detail = TicketDetail & { canAct: boolean };
 type FormKind = "assign" | "severity" | "request" | "resolve" | "note" | "public" | "reopen" | null;
 
-export function TicketPanel({ id, onClose, onChanged, officer, standalone = false }: { id: string; onClose?: () => void; onChanged?: () => void; officer: SessionOfficer; standalone?: boolean }) {
+export function TicketPanel({
+  id,
+  onClose,
+  onChanged,
+  officer,
+  standalone = false,
+  nav,
+}: {
+  id: string;
+  onClose?: () => void;
+  onChanged?: () => void;
+  officer: SessionOfficer;
+  standalone?: boolean;
+  nav?: { index: number; total: number; prev?: () => void; next?: () => void };
+}) {
+  const [tabSel, setTabSel] = useState<"overview" | "evidence" | "activity">("overview");
   const [t, setT] = useState<Detail | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "notfound">("loading");
   const [form, setForm] = useState<FormKind>(null);
@@ -37,6 +52,7 @@ export function TicketPanel({ id, onClose, onChanged, officer, standalone = fals
 
   useEffect(() => {
     setState("loading");
+    setTabSel("overview");
     setForm(null);
     setError("");
     load();
@@ -114,60 +130,75 @@ export function TicketPanel({ id, onClose, onChanged, officer, standalone = fals
             ? { label: "Start work (In progress)", run: () => act({ action: "start" }, "Moved to In progress") }
             : { label: "Acknowledge", run: () => act({ action: "acknowledge" }, "Acknowledged") };
 
+  const firstPhoto = t.reports.find((r) => r.photoUrl);
   return (
-    <article className="pb-16" aria-labelledby="ticket-title">
+    <article className="pb-10 text-[14px]" aria-labelledby="ticket-title">
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-line bg-surface/95 px-5 pt-4 pb-4 backdrop-blur sm:px-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-mono text-sm text-muted">{t.reference}</span>
-            {t.isSample && <SampleTag />}
-            <SeverityBadge severity={t.severity} />
-            <StatusBadge status={status} />
-            {t.department ? <span className="chip border-line bg-paper text-ink-2">{t.department}</span> : <span className="chip border-dashed border-crit text-crit">Unassigned</span>}
-          </div>
-          <div className="flex items-center gap-1">
-            {!standalone && (
-              <Link href={`/officer/tickets/${t.id}`} className="btn-ghost btn-sm hidden sm:inline-flex">
-                Open page
-              </Link>
-            )}
-            {onClose && <CloseButton onClose={onClose} />}
-          </div>
+      <div className="sticky top-0 z-10 border-b border-line bg-white px-4 pb-3 pt-3">
+        <div className="flex items-center justify-between gap-2 text-[13px]">
+          {onClose ? (
+            <button onClick={onClose} className="rounded-md px-1.5 py-1 text-ink-2 hover:bg-paper" aria-label="Close ticket details">
+              ← Close
+            </button>
+          ) : (
+            <span />
+          )}
+          {nav && (
+            <span className="flex items-center gap-1 text-muted">
+              <button className="rounded-md px-1.5 py-0.5 hover:bg-paper disabled:opacity-30" onClick={nav.prev} disabled={!nav.prev} aria-label="Previous ticket">
+                ‹
+              </button>
+              {nav.index + 1} of {nav.total}
+              <button className="rounded-md px-1.5 py-0.5 hover:bg-paper disabled:opacity-30" onClick={nav.next} disabled={!nav.next} aria-label="Next ticket">
+                ›
+              </button>
+            </span>
+          )}
+          {!standalone ? (
+            <Link href={`/officer/tickets/${t.id}`} className="rounded-md px-1.5 py-1 text-ink-2 hover:bg-paper">
+              Open page
+            </Link>
+          ) : (
+            <span />
+          )}
         </div>
-        <h2 id="ticket-title" ref={headingRef} tabIndex={-1} className="mt-2 text-xl font-semibold leading-tight tracking-tight outline-none">
+
+        <p className="mt-3 text-center text-[12px] text-muted">
+          {t.reference}
+          {t.isSample && " · sample"} · {timeAgoLong(t.createdAt)}
+        </p>
+        <h2 id="ticket-title" ref={headingRef} tabIndex={-1} className="mt-1 text-center text-[17px] font-semibold leading-snug outline-none">
           {t.title}
         </h2>
-        <p className="mt-1 text-sm text-muted">
-          {CATEGORY_LABEL[t.category as CategoryCode]} · {subtypeLabel(t.subtype)} · opened {timeAgoLong(t.createdAt)} · {t.reports.length} report{t.reports.length === 1 ? "" : "s"}
+        <p className="mt-1.5 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[13px]">
+          <SeverityBadge severity={t.severity} size="sm" />
+          <span className="text-ink-2">{t.statusLabel}</span>
+          <span className="text-muted">·</span>
+          {t.department ? <span className="text-ink-2">{t.department}</span> : <span className="text-crit">Unassigned</span>}
         </p>
 
         {/* Next action */}
         {primary && (
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button className="btn-primary" disabled={busy} onClick={primary.run}>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
+            <button className="rounded-lg bg-ink px-4 py-2 text-[13px] font-medium text-white hover:bg-ink-2 disabled:opacity-50" disabled={busy} onClick={primary.run}>
               {busy ? "Saving…" : primary.label}
             </button>
             {!resolved && (
               <>
                 {t.departmentId && (
-                  <button className="btn-outline btn-sm" onClick={() => setForm("assign")}>
+                  <button className="rounded-lg border border-line px-3 py-2 text-[13px] hover:bg-paper" onClick={() => setForm("assign")}>
                     Reroute
                   </button>
                 )}
-                <button className="btn-outline btn-sm" onClick={() => setForm("severity")}>
-                  Correct severity
-                </button>
-                <button className="btn-outline btn-sm" onClick={() => setForm("request")}>
-                  Request detail
-                </button>
                 {status !== "IN_PROGRESS" && (
-                  <button className="btn-outline btn-sm" onClick={() => setForm("resolve")}>
+                  <button className="rounded-lg border border-line px-3 py-2 text-[13px] hover:bg-paper" onClick={() => setForm("resolve")}>
                     Resolve
                   </button>
                 )}
                 <MoreMenu
                   items={[
+                    { label: "Correct severity", run: () => setForm("severity") },
+                    { label: "Request detail", run: () => setForm("request") },
                     { label: "Post citizen update", run: () => setForm("public") },
                     { label: "Add internal note", run: () => setForm("note") },
                     ...(t.needsReevaluation || t.reviewReasons.length || t.urgentReview ? [{ label: "Mark reviewed", run: () => act({ action: "mark_reviewed" }, "Marked reviewed") }] : []),
@@ -177,9 +208,9 @@ export function TicketPanel({ id, onClose, onChanged, officer, standalone = fals
             )}
           </div>
         )}
-        {!t.canAct && <p className="mt-3 rounded-lg bg-paper px-3 py-2 text-sm text-ink-2">Read-only: this ticket belongs to {t.department}. A supervisor can reroute it.</p>}
+        {!t.canAct && <p className="mt-3 rounded-lg bg-paper px-3 py-2 text-[13px] text-ink-2">Read-only: this ticket belongs to {t.department}. A supervisor can reroute it.</p>}
         {t.mergedInto && (
-          <p className="mt-3 rounded-lg bg-paper px-3 py-2 text-sm">
+          <p className="mt-3 rounded-lg bg-paper px-3 py-2 text-[13px]">
             Merged into{" "}
             <Link className="font-medium underline" href={`/officer?t=${t.mergedInto.id}`}>
               {t.mergedInto.reference}
@@ -187,21 +218,31 @@ export function TicketPanel({ id, onClose, onChanged, officer, standalone = fals
             .
           </p>
         )}
-        <div aria-live="polite" className="text-sm">
+        <div aria-live="polite" className="text-[13px]">
           {flash && <p className="mt-3 rounded-lg bg-accent-soft px-3 py-2 text-accent-ink">✓ {flash}</p>}
         </div>
         {error && (
-          <p role="alert" className="mt-3 rounded-lg bg-crit-soft px-3 py-2 text-sm text-crit">
+          <p role="alert" className="mt-3 rounded-lg bg-crit-soft px-3 py-2 text-[13px] text-crit">
             {error}
           </p>
         )}
         {form && <ActionForm kind={form} t={t} busy={busy} onCancel={() => { setForm(null); setError(""); }} onSubmit={act} officer={officer} />}
+
+        <div role="tablist" aria-label="Ticket sections" className="mx-auto mt-3 flex w-fit rounded-lg bg-paper p-0.5">
+          {(["overview", "evidence", "activity"] as const).map((k) => (
+            <button key={k} role="tab" aria-selected={tabSel === k} onClick={() => setTabSel(k)} className={`rounded-md px-3 py-1 text-[13px] capitalize ${tabSel === k ? "bg-white font-medium shadow-sm" : "text-muted"}`}>
+              {k === "evidence" ? `Evidence (${t.reports.length})` : k}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="space-y-6 px-5 pt-5 sm:px-6">
+      <div className="space-y-4 px-4 pt-4">
+        {tabSel === "overview" && (
+          <>
         {/* Review flags */}
         {(t.urgentReview || t.reviewReasons.length > 0 || t.needsReevaluation) && !resolved && (
-          <section aria-label="Review flags" className={`rounded-xl border p-4 ${t.urgentReview ? "border-crit bg-crit-soft" : "border-[#ecd894] bg-med-soft"}`}>
+          <section aria-label="Review flags" className={`rounded-lg border p-3 text-[13px] ${t.urgentReview ? "border-crit bg-crit-soft" : "border-[#ecd894] bg-med-soft"}`}>
             {t.urgentReview && <p className="font-semibold text-crit">▲ Urgent review — possible critical hazard with missing ward or owner</p>}
             {t.needsReevaluation && <p className="font-medium text-low">Citizen or system update since last review — re-evaluate.</p>}
             {t.reviewReasons.length > 0 && (
@@ -216,7 +257,7 @@ export function TicketPanel({ id, onClose, onChanged, officer, standalone = fals
 
         {/* Duplicate suggestions */}
         {t.suggestions.length > 0 && !t.mergedInto && (
-          <section aria-labelledby="h-dup" className="rounded-xl border border-ink p-4">
+          <section aria-labelledby="h-dup" className="rounded-lg border border-ink p-3 text-[13px]">
             <h3 id="h-dup" className="font-semibold">
               Possible {t.suggestions.some((s) => s.kind === "POSSIBLE_RECURRENCE") ? "duplicate or recurrence" : "duplicate"}
             </h3>
@@ -247,50 +288,55 @@ export function TicketPanel({ id, onClose, onChanged, officer, standalone = fals
           </section>
         )}
 
-        {/* Severity + summary */}
-        <section aria-labelledby="h-why" className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-xl border border-line p-4">
-            <h3 id="h-why" className="text-sm text-muted">
-              Why {SEVERITY_LABEL[t.severity]}
-            </h3>
-            <p className="mt-1 font-medium leading-snug">{t.severityReason}</p>
-          </div>
-          <div className="rounded-xl border border-line p-4">
-            <h3 className="text-sm text-muted">AI summary</h3>
-            <p className="mt-1 text-[15px] leading-snug text-ink-2">{t.summary}</p>
-          </div>
-        </section>
-
-        {/* Location */}
-        <section aria-labelledby="h-location" className="overflow-hidden rounded-xl border border-line">
-          <div className="flex flex-wrap items-start justify-between gap-2 p-4">
-            <div>
-              <h3 id="h-location" className="text-sm text-muted">
-                Location
-              </h3>
-              {t.lat != null ? (
-                <>
-                  <p className="mt-1 font-medium">{t.locationText ?? t.landmark ?? "Pinned location"}</p>
-                  <p className="text-sm text-ink-2">
-                    {t.ward ?? "Outside sample wards"} · {t.locationPrecise ? "Citizen-confirmed pin" : `Approximate (from landmark${t.landmark ? `: ${t.landmark}` : ""})`}
-                  </p>
-                </>
-              ) : (
-                <p className="mt-1 font-medium text-med">Location missing{t.locationText ? ` — citizen wrote “${t.locationText}”` : ""}</p>
-              )}
-            </div>
-            <div className="text-right">
-              <h3 className="text-sm text-muted">Responsible department</h3>
-              <p className="mt-1 font-medium">{t.department ?? <span className="text-crit">Not assigned</span>}</p>
-            </div>
-          </div>
-          {t.lat != null && t.lng != null && <MiniMap lat={t.lat} lng={t.lng} label={`Ticket location in ${t.ward ?? "Port Alder"}`} />}
-        </section>
-
+            <dl className="divide-y divide-line rounded-lg border border-line text-[13px]">
+              <div className="p-3">
+                <dt className="text-muted">Why {SEVERITY_LABEL[t.severity]}</dt>
+                <dd className="mt-0.5">{t.severityReason}</dd>
+              </div>
+              <div className="p-3">
+                <dt className="text-muted">Summary</dt>
+                <dd className="mt-0.5 text-ink-2">{t.summary}</dd>
+              </div>
+              <div className="p-3">
+                <dt className="text-muted">Location</dt>
+                <dd className="mt-0.5">
+                  {t.lat != null ? (
+                    <>
+                      {t.locationText ?? t.landmark ?? "Pinned location"}
+                      <span className="text-muted">
+                        {" "}
+                        · {t.ward ? `${t.ward} · ` : ""}
+                        {t.locationPrecise ? "citizen-confirmed pin" : "approximate"}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-med">Location missing{t.locationText ? ` — citizen wrote “${t.locationText}”` : ""}</span>
+                  )}
+                </dd>
+              </div>
+              <div className="p-3">
+                <dt className="text-muted">Category</dt>
+                <dd className="mt-0.5">
+                  {CATEGORY_LABEL[t.category as CategoryCode]} · {subtypeLabel(t.subtype)}
+                </dd>
+              </div>
+            </dl>
+            {t.lat != null && t.lng != null && (
+              <div className="overflow-hidden rounded-lg border border-line">
+                <MiniMap lat={t.lat} lng={t.lng} label={`Ticket location${t.ward ? ` in ${t.ward}` : ""}`} className="h-36 w-full" />
+              </div>
+            )}
+            {firstPhoto?.photoUrl && (
+              <button type="button" onClick={() => setTabSel("evidence")} className="block w-full overflow-hidden rounded-lg border border-line text-left">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={firstPhoto.photoUrl} alt={`Photo thumbnail for ${firstPhoto.reference}`} className="h-36 w-full bg-paper object-cover" loading="lazy" />
+                <span className="block px-3 py-1.5 text-[12px] text-muted">Photo · open evidence</span>
+              </button>
+            )}
         {/* Info requests */}
         {t.infoRequests.length > 0 && (
           <section aria-labelledby="h-req">
-            <h3 id="h-req" className="font-semibold">
+            <h3 id="h-req" className="text-[13px] font-semibold">
               Questions to citizens
             </h3>
             <ul className="mt-2 space-y-2">
@@ -310,41 +356,48 @@ export function TicketPanel({ id, onClose, onChanged, officer, standalone = fals
           </section>
         )}
 
-        {/* Reports */}
-        <section aria-labelledby="h-reports">
-          <h3 id="h-reports" className="font-semibold">
-            Citizen reports ({t.reports.length})
-          </h3>
-          <div className="mt-2 space-y-4">
-            {t.reports.map((r) => (
-              <ReportCard key={r.id} r={r} canAct={t.canAct} busy={busy} onRetry={() => act({ action: "retry_processing", reportId: r.id }, `AI processing re-queued for ${r.reference}`)} />
-            ))}
-          </div>
-        </section>
+          </>
+        )}
 
-        {/* Activity */}
-        <section aria-labelledby="h-activity">
-          <h3 id="h-activity" className="font-semibold">
-            Activity history
-          </h3>
-          <ol className="mt-3 space-y-3 border-l border-line pl-4">
-            {t.events.map((e) => (
-              <li key={e.id} className="relative text-sm">
-                <span className={`absolute -left-[21px] top-1.5 h-2.5 w-2.5 rounded-full ring-2 ring-surface ${e.actorType === "OFFICER" ? "bg-ink" : e.actorType === "CITIZEN" ? "bg-accent-hover" : "bg-line-strong"}`} aria-hidden="true" />
-                <p className="flex flex-wrap items-center gap-x-2">
-                  <span className="font-medium">{e.actor}</span>
-                  <span className="text-ink-2">{eventLabel(e.type)}</span>
-                  {e.report && <span className="font-mono text-xs text-muted">{e.report}</span>}
-                  <span className={`chip h-5 px-1.5 text-[10px] ${e.visibility === "PUBLIC" ? "border-[#b9d36a] text-accent-ink" : "border-line text-muted"}`}>{e.visibility === "PUBLIC" ? "Citizen-visible" : "Internal"}</span>
-                </p>
-                {e.note && <p className="mt-0.5 text-ink-2">{e.note}</p>}
-                {e.publicMessage && e.visibility === "PUBLIC" && <p className="mt-0.5 text-muted">Citizen sees: “{e.publicMessage}”</p>}
-                {(e.before || e.after) && <BeforeAfter before={e.before} after={e.after} />}
-                <p className="text-xs text-muted">{formatDateTime(e.at)}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
+        {tabSel === "evidence" && (
+          <section aria-labelledby="h-reports">
+            <h3 id="h-reports" className="sr-only">
+              Citizen reports ({t.reports.length})
+            </h3>
+            <div className="space-y-4">
+              {t.reports.map((r) => (
+                <ReportCard key={r.id} r={r} canAct={t.canAct} busy={busy} onRetry={() => act({ action: "retry_processing", reportId: r.id }, `AI processing re-queued for ${r.reference}`)} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {tabSel === "activity" && (
+          <section aria-labelledby="h-activity">
+            <h3 id="h-activity" className="sr-only">
+              Activity history
+            </h3>
+            <ol className="space-y-3 text-[13px]">
+              {t.events.map((e) => (
+                <li key={e.id} className="grid grid-cols-[52px_1fr] gap-2">
+                  <span className="pt-0.5 text-[12px] tabular-nums text-muted" title={formatDateTime(e.at)}>
+                    {new Date(e.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                  <div>
+                    <p>
+                      <span className="font-medium">{e.actor}</span> <span className="text-ink-2">{eventLabel(e.type)}</span>
+                      {e.report && <span className="text-muted"> · {e.report}</span>}
+                      <span className="text-muted"> · {e.visibility === "PUBLIC" ? "Citizen-visible" : "Internal"}</span>
+                    </p>
+                    {e.note && <p className="mt-0.5 text-ink-2">{e.note}</p>}
+                    {e.publicMessage && e.visibility === "PUBLIC" && <p className="mt-0.5 text-muted">Citizen sees: “{e.publicMessage}”</p>}
+                    {(e.before || e.after) && <BeforeAfter before={e.before} after={e.after} />}
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
       </div>
     </article>
   );

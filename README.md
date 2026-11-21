@@ -2,7 +2,7 @@
   <img src="docs/assets/urbaniq-banner.jpg" alt="UrbanIQ — Smarter cities. Faster fixes." width="100%" />
 </p>
 
-<h3 align="center">Smarter cities. Faster fixes.</h3>
+<h3 align="center">Smarter cities. Faster fixes. 🇮🇳 Built for India.</h3>
 
 <p align="center">
   AI-assisted municipal complaint triage: from a citizen's photo or sentence to a routed, prioritised ticket in seconds,<br/>
@@ -16,7 +16,7 @@
   <img alt="Claude" src="https://img.shields.io/badge/AI_triage-Claude-D97757" />
   <img alt="YOLO" src="https://img.shields.io/badge/Vision-YOLO11n_(advisory)-FF6B00" />
   <img alt="Google Maps" src="https://img.shields.io/badge/Maps-Google_Maps_%2B_Places-34A853?logo=googlemaps&logoColor=white" />
-  <img alt="Tests" src="https://img.shields.io/badge/checks-43_unit_·_52_UI_·_6_vision-2EA44F" />
+  <img alt="Tests" src="https://img.shields.io/badge/checks-43_unit_·_67_UI_·_6_vision-2EA44F" />
 </p>
 
 <p align="center">
@@ -46,7 +46,8 @@ school"). Officers then spend their mornings re-typing, guessing the owner and h
 | A second report about the same pothole | **Auto-linked** to the existing ticket. Each citizen keeps their own private tracking link |
 
 > [!NOTE]
-> The demo runs in **Port Alder**, a fictional municipality. All wards, streets, reports and officers are
+> **India only by default** (`SERVICE_REGION=IN`). Pins, device locations and Google Places search are restricted to India, and the server rejects reports located elsewhere.
+> For offline demos there is also **Port Alder**, a fictional municipality. All wards, streets, reports and officers are
 > clearly labelled sample data, and the sample wards sit in the open ocean so they can't be mistaken for a real city.
 
 ## 📸 Screenshots
@@ -94,6 +95,8 @@ flowchart LR
 - 🔗 A private, unguessable tracking link with a status timeline, department, resolution note, answers to the city's questions, and location corrections.
 
 **For officers**
+- 📍 **Your area first.** The dashboard detects where the officer is working from (browser location, never sent to the server), centres the map there, shows each ticket's distance and filters to *within 2 / 5 / 10 / 25 km of me*.
+- 🔥 **Heatmap.** A severity-weighted heatmap shows where problems cluster; it can be toggled off.
 - 🗂️ The priority queue sorts Critical → Low, then oldest first. **Urgent review** is pinned on top, and tickets without coordinates stay visible.
 - 🗺️ A dark ward map synced with the queue: selecting a row highlights its pin, and clicking a pin opens the ticket with its ward and severity.
 - 🔎 Evidence side by side: the original complaint, what the citizen said, what the photo shows, detector boxes, risk factors, conflicts, and linked reports.
@@ -248,6 +251,14 @@ Set `CIVICFLOW_MODE=live` and `SEED_DEMO_DATA=false`, then open the app containe
 
 Department codes are `ROADS`, `WASTE`, `WATER`, `LIGHTS`, `ELEC`, `TREES`, `DRAIN`, `SEWER` and `HARBOUR`. Departments and default routing rules are created automatically on every start; the step is idempotent. To change them, edit `prisma/reference-data.ts`.
 
+**Removing the sample data**
+
+```bash
+/app/docker/entrypoint.sh reset-data --yes
+```
+
+This deletes every report, ticket and photo, and keeps departments, routing rules and officer accounts.
+
 **What the container does on start**
 
 * Runs `prisma migrate deploy`, unless `RUN_MIGRATIONS=false`.
@@ -265,6 +276,7 @@ Department codes are `ROADS`, `WASTE`, `WATER`, `LIGHTS`, `ELEC`, `TREES`, `DRAI
 | Unit + integration (severity order, ward routing, duplicate linking under concurrency, access control, vision handling) | `npm test` | **43 / 43** |
 | Core UI flows: pothole → High/Roads, duplicate linking, Critical wire + urgent review, photo-only, officer lifecycle, access control, mobile | `node verification/e2e.mjs` | **27 / 27** |
 | Maps + vision UI flows: all five detector types, no-vision model, location permission denied, ward match, out-of-area, Maps unavailable, pin ↔ queue sync | `node verification/e2e-maps-vision.mjs` | **25 / 25** |
+| India profile: region-restricted search, out-of-India rejection, officer location + distance filter, heatmap | `node verification/e2e-india.mjs` | **15 / 15** |
 | Vision service (fake model): mapping, auth, missing model, checksum pin, class-map mismatch | `cd vision && pytest -q` | **6 / 6** |
 | Typecheck, lint, production build | `npm run typecheck && npm run lint && npm run build` | ✔ |
 

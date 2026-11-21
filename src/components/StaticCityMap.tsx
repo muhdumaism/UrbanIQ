@@ -62,7 +62,7 @@ export function StaticCityMap({
           const cx = ring.reduce((a, c) => a + x(c[0]), 0) / ring.length;
           const cy = ring.reduce((a, c) => a + y(c[1]), 0) / ring.length;
           return (
-            <text key={f.properties.code} x={cx} y={cy} textAnchor="middle" fill="#8996a3" fontSize={15} fontFamily="var(--font-geist-sans)" letterSpacing="0.08em">
+            <text key={f.properties.code} x={cx} y={cy} textAnchor="middle" fill="#8996a3" fontSize={15} fontFamily="system-ui" letterSpacing="0.08em">
               {f.properties.code} · {f.properties.name.toUpperCase()}
             </text>
           );

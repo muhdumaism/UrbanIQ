@@ -13,7 +13,7 @@ import { TriageResultSchema, type TriageResult } from "./ai/schema";
 import { decideSeverity, isHigherSeverity } from "./severity";
 import { resolveRoute } from "./routing";
 import { findMatches, type MatchCandidate } from "./matching";
-import { findLandmark, wardForPoint, wardLabel } from "./municipality";
+import { findLandmark, wardForPoint, wardLabel, wardsEnabled } from "./municipality";
 import { SEVERITY_LABEL, categoryOf, subtypeLabel } from "./taxonomy";
 import { analyzePhoto, parseStoredVision } from "./vision";
 
@@ -89,7 +89,7 @@ export function resolveLocation(
   const lm = findLandmark(report.locationText, t?.landmark_mentioned, ...(t?.location_clues ?? []), report.text);
   if (hasPin) {
     const ward = wardForPoint(report.lat!, report.lng!);
-    return { lat: report.lat, lng: report.lng, precise: true, wardCode: ward, landmark: lm?.name ?? null, text: report.locationText, outsideBoundary: !ward };
+    return { lat: report.lat, lng: report.lng, precise: true, wardCode: ward, landmark: lm?.name ?? null, text: report.locationText, outsideBoundary: wardsEnabled() && !ward };
   }
   if (lm) {
     return { lat: lm.lat, lng: lm.lng, precise: false, wardCode: lm.wardCode, landmark: lm.name, text: report.locationText || `Near ${lm.name}`, outsideBoundary: false };
@@ -162,14 +162,15 @@ export async function fileTriage(reportId: string, t: TriageResult, provider: st
 
       const loc = resolveLocation(report, t);
       const sev = decideSeverity(t);
-      const route = resolveRoute(rules, t.subtype, loc.wardCode);
+      // Without ward boundaries, only city-wide rules apply.
+      const route = resolveRoute(wardsEnabled() ? rules : rules.filter((r) => r.wardCode === "*"), t.subtype, loc.wardCode);
       const departmentId = route.status === "routed" ? route.departmentId : null;
 
       const reviewReasons = [...sev.reviewFlags];
       if (failure) reviewReasons.unshift(`AI processing failed: ${failure} Classification below is a keyword fallback.`);
       if (route.status === "uncertain") reviewReasons.push(`Ownership uncertain: ${route.reason}`);
       if (loc.outsideBoundary) reviewReasons.push("Confirmed pin is outside the municipal ward boundaries");
-      else if (!loc.wardCode) reviewReasons.push("Location too vague to route");
+      else if (loc.lat == null) reviewReasons.push("Location too vague to route");
       else if (!loc.precise) reviewReasons.push(`Approximate location from landmark (${loc.landmark}) — confirm`);
       const photoOnly = !report.text && Boolean(report.photoKey);
       if (photoOnly && (t.subtype === "other" || t.category_confidence === "low")) {
@@ -200,7 +201,7 @@ export async function fileTriage(reportId: string, t: TriageResult, provider: st
         const soleReport = ticket.reports.length === 1;
         if (soleReport && !officerTouched) {
           const before = { category: ticket.category, subtype: ticket.subtype, severity: ticket.severity, departmentId: ticket.departmentId };
-          const stillVague = !loc.wardCode;
+          const stillVague = loc.lat == null;
           const status =
             ticket.status === "NEEDS_REVIEW" || ticket.status === "WAITING_FOR_DETAILS" || ticket.status === "NEW"
               ? failure || reviewReasons.some((r) => r !== "Location too vague to route") || !departmentId
@@ -220,7 +221,7 @@ export async function fileTriage(reportId: string, t: TriageResult, provider: st
               severityReason: sev.reason,
               departmentId: ticket.departmentId ?? departmentId,
               reviewReasons,
-              urgentReview: (sev.severity === "CRITICAL" && (!loc.wardCode || !departmentId)) || sev.urgent,
+              urgentReview: (sev.severity === "CRITICAL" && (loc.lat == null || loc.outsideBoundary || !departmentId)) || sev.urgent,
               status,
               needsReevaluation: true,
             },
@@ -321,12 +322,12 @@ export async function fileTriage(reportId: string, t: TriageResult, provider: st
       }
 
       // ── New ticket
-      const vague = !loc.wardCode && !loc.outsideBoundary;
+      const vague = loc.lat == null;
       const blocking = reviewReasons.filter((r) => r !== "Location too vague to route");
       let status: "NEW" | "NEEDS_REVIEW" | "WAITING_FOR_DETAILS" = "NEW";
       if (failure || blocking.length || !departmentId) status = "NEEDS_REVIEW";
       if (vague) status = sev.severity === "CRITICAL" || failure ? "NEEDS_REVIEW" : "WAITING_FOR_DETAILS";
-      const urgent = (sev.severity === "CRITICAL" && (!loc.wardCode || !departmentId)) || sev.urgent;
+      const urgent = (sev.severity === "CRITICAL" && (loc.lat == null || loc.outsideBoundary || !departmentId)) || sev.urgent;
 
       const reference = await nextTicketReference(tx);
       const ticket = await tx.ticket.create({

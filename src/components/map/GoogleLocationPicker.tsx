@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { PickedLocation } from "./location-types";
-import { fetchWards, GOOGLE_MAP_ID, loadGoogleMaps, styleWards, wardFromGeojson, wardsBounds, type WardsPayload } from "./google";
+import { fetchWards, GOOGLE_MAP_ID, loadGoogleMaps, pointInServiceRegion, regionMapOptions, setInitialView, styleWards, wardFromGeojson, type WardsPayload } from "./google";
 
 /**
  * Google Maps location picker: Places search, click/drag pin, browser geolocation, explicit confirmation.
@@ -39,14 +39,15 @@ export function GoogleLocationPicker({ value, onChange, error, idPrefix = "loc" 
           zoomControl: true,
           clickableIcons: false,
           gestureHandling: "cooperative",
+          ...regionMapOptions(w),
         });
-        map.fitBounds(wardsBounds(w.geojson), 16);
+        setInitialView(map, w);
         styleWards(map, w.geojson);
         (mapBox.current as HTMLDivElement & { __gmap?: google.maps.Map }).__gmap = map;
         mapRef.current = map;
         map.addListener("click", (e: google.maps.MapMouseEvent) => e.latLng && setPin(e.latLng.lat(), e.latLng.lng(), "PIN", null));
 
-        const ac = new places.PlaceAutocompleteElement({});
+        const ac = new places.PlaceAutocompleteElement(w.region ? { includedRegionCodes: [w.region.code.toLowerCase()] } : {});
         ac.id = `${idPrefix}-search`;
         ac.setAttribute("aria-label", "Search for a street, landmark or place");
         ac.addEventListener("gmp-select", async (ev: Event) => {
@@ -101,6 +102,10 @@ export function GoogleLocationPicker({ value, onChange, error, idPrefix = "loc" 
       (pos) => {
         setLocating(false);
         const { latitude, longitude } = pos.coords;
+        if (wards && !pointInServiceRegion(wards, latitude, longitude)) {
+          setGeoMsg(`Your device location is outside ${wards.region?.name}. Search, drop a pin, or type a landmark instead.`);
+          return;
+        }
         setPin(latitude, longitude, "DEVICE", null);
         mapRef.current?.panTo({ lat: latitude, lng: longitude });
         mapRef.current?.setZoom(17);
@@ -118,6 +123,7 @@ export function GoogleLocationPicker({ value, onChange, error, idPrefix = "loc" 
   };
 
   const ward = value.lat != null && value.lng != null && wards ? wardFromGeojson(wards.geojson, value.lat, value.lng) : null;
+  const outsideRegion = value.lat != null && value.lng != null && wards != null && !pointInServiceRegion(wards, value.lat, value.lng);
   const errId = `${idPrefix}-error`;
 
   return (
@@ -125,7 +131,7 @@ export function GoogleLocationPicker({ value, onChange, error, idPrefix = "loc" 
       {state !== "failed" && (
         <div>
           <label htmlFor={`${idPrefix}-search`} className="label">
-            Search for a place
+            Search for a place{wards?.region ? ` in ${wards.region.name}` : ""}
           </label>
           <div ref={searchBox} className="min-h-11 [&_gmp-place-autocomplete]:w-full" />
         </div>
@@ -163,7 +169,11 @@ export function GoogleLocationPicker({ value, onChange, error, idPrefix = "loc" 
       {value.lat != null && value.lng != null && (
         <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${value.confirmed ? "border-[#b9d36a] bg-accent-soft" : "border-line-strong bg-surface"}`}>
           <p className="text-sm">
-            {ward ? (
+            {outsideRegion ? (
+              <span className="text-crit">This pin is outside {wards?.region?.name}. UrbanIQ only accepts reports in {wards?.region?.name} — move the pin to the issue&apos;s location.</span>
+            ) : wards?.mode === "none" ? (
+              <>Pin placed{value.source === "DEVICE" ? " at your device location" : ""}. Check it&apos;s on the exact spot, then confirm.</>
+            ) : ward ? (
               <>
                 Pin looks like it&apos;s in <strong>{ward.label}</strong>
                 {value.source === "DEVICE" ? " (from your device)" : ""}.
@@ -175,7 +185,7 @@ export function GoogleLocationPicker({ value, onChange, error, idPrefix = "loc" 
           {value.confirmed ? (
             <span className="text-sm font-medium text-accent-ink">✓ Location confirmed</span>
           ) : (
-            <button type="button" className="btn-dark btn-sm" onClick={() => onChange({ ...value, confirmed: true })}>
+            <button type="button" className="btn-dark btn-sm" disabled={outsideRegion} onClick={() => onChange({ ...value, confirmed: true })}>
               Confirm this location
             </button>
           )}

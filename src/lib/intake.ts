@@ -6,6 +6,7 @@ import { processPhoto, PhotoError, MAX_PHOTO_BYTES } from "./photo";
 import { newPhotoKey, storage } from "./storage";
 import { newReportReference, sha256, trackingTokenFor } from "./tokens";
 import { enqueueTriage } from "./jobs";
+import { inServiceRegion, serviceRegion } from "./municipality";
 
 export const MAX_TEXT = 4000;
 
@@ -67,7 +68,10 @@ export async function createReportFromForm(form: FormData): Promise<IntakeResult
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
       throw new IntakeError({ location: "That map location isn't valid. Please drop the pin again." });
     }
-    // Out-of-area pins are accepted and sent to officer review (never silently dropped).
+    if (!inServiceRegion(lat, lng)) {
+      throw new IntakeError({ location: `UrbanIQ only accepts reports in ${serviceRegion()?.name}. Move the pin to the issue's location.` });
+    }
+    // Pins inside the country but outside configured wards are accepted and sent to officer review.
   }
   const confirmed = f.locationConfirmed === "true" && lat != null;
   const source = lat != null ? (f.locationSource === "DEVICE" ? "DEVICE" : "PIN") : f.locationText ? "LANDMARK" : "NONE";

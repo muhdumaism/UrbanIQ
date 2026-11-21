@@ -147,10 +147,11 @@ check("Officer queue shows the ticket in ward W3", Boolean(wardRow && /W3/.test(
 await op.locator('[aria-label="Tickets"] li', { hasText: "Garbage" }).first().getByRole("button").click();
 await op.locator("article h2").waitFor();
 const info = await op.locator("[data-stub-info]").innerText().catch(() => "");
-const card = await op.locator('[aria-live="polite"]', { hasText: "·" }).first().innerText().catch(() => "");
-check("Selecting a queue row highlights its pin and shows ticket, severity and ward at the pin", (await op.locator('button[aria-pressed="true"]').count()) === 1 && /T-\d+ · (Low|Medium|High|Critical)/.test(info) && /W2/.test(info), info.replace(/\n/g, " | "));
-check("Selected-ticket card shows reference, severity and ward", /T-\d+ · \w+/.test(card) && /W2/.test(card), card.replace(/\n/g, " | "));
+const card = await op.locator("article").innerText();
+check("Selecting a queue row highlights its pin and shows ticket, severity and ward at the pin", (await op.locator('section[aria-label="Ward map"] button[aria-pressed="true"]').count()) === 1 && /T-\d+ · (Low|Medium|High|Critical)/.test(info) && /W2/.test(info), info.replace(/\n/g, " | "));
+check("Detail panel shows the selected ticket's reference and severity", /T-\d+/.test(card) && /(Low|Medium|High|Critical)/.test(card));
 
+await op.locator("article").getByRole("tab", { name: /Evidence/ }).click();
 const detail = await op.locator("article").innerText();
 check("Ticket shows advisory detector label, confidence and box", /Photo detector · advisory/i.test(detail) && /garbage → garbage/.test(detail) && /87%/.test(detail));
 check("Detector bounding box drawn over the photo", (await op.locator("article figure div[aria-hidden=true]").count()) >= 1);
@@ -169,6 +170,8 @@ check("Clicking a pin opens its ticket and shows ticket/ward/severity", after.in
 await op.locator("#q").fill(ward.ref);
 await op.waitForTimeout(800);
 await op.locator('[aria-label="Tickets"] li').first().getByRole("button").click();
+await op.locator("article h2").waitFor();
+await op.locator("article").getByRole("tab", { name: /Evidence/ }).click();
 await op.locator("article").getByText(/Citizen picked a place in Google search/).waitFor();
 const placeLine = await op.locator("article").getByText(/Citizen picked a place in Google search/).first().innerText();
 check("Officer sees the citizen's Google place (fetched live, attributed)", /Millbrook Park/.test(placeLine) && /© Google/.test(placeLine), placeLine);
@@ -178,6 +181,7 @@ await op.locator("#q").fill(noVision.ref);
 await op.waitForTimeout(800);
 await op.locator('[aria-label="Tickets"] li').first().getByRole("button").click();
 await op.locator("article h2").waitFor();
+await op.locator("article").getByRole("tab", { name: /Evidence/ }).click();
 check("No-vision ticket shows 'Unavailable' detector status", /Unavailable/.test(await op.locator("article").innerText()));
 
 // Inconclusive photo-only report → Needs review for officers
@@ -185,7 +189,9 @@ await op.locator("#q").fill(inconclusive.ref);
 await op.waitForTimeout(800);
 await op.locator('[aria-label="Tickets"] li').first().getByRole("button").click();
 await op.locator("article h2").waitFor();
-const incDetail = await op.locator("article").innerText();
+let incDetail = await op.locator("article").innerText();
+await op.locator("article").getByRole("tab", { name: /Evidence/ }).click();
+incDetail += await op.locator("article").innerText();
 check("Inconclusive photo-only ticket is in Needs review for insufficient evidence", /Needs review/.test(incDetail) && /insufficient evidence/.test(incDetail) && /Inconclusive/.test(incDetail));
 
 // Out-of-area in review

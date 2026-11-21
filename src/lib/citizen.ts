@@ -6,7 +6,7 @@ import { TriageResultSchema } from "./ai/schema";
 import { resolveLocation, loadCandidates, matchConfig } from "./pipeline";
 import { resolveRoute } from "./routing";
 import { findMatches } from "./matching";
-import { wardLabel } from "./municipality";
+import { inServiceRegion, serviceRegion, wardLabel, wardsEnabled } from "./municipality";
 import { CATEGORY_LABEL, PUBLIC_STATUS_LABEL, subtypeLabel, type CategoryCode, type TicketStatusCode } from "./taxonomy";
 
 export async function findReportByToken(token: string) {
@@ -96,6 +96,9 @@ export class CitizenUpdateError extends Error {}
 export async function applyCitizenUpdate(token: string, input: z.infer<typeof CitizenUpdateSchema>) {
   const report = await findReportByToken(token);
   if (!report) return { ok: false as const, status: 404 };
+  if (input.location?.lat != null && input.location.lng != null && !inServiceRegion(input.location.lat, input.location.lng)) {
+    throw new CitizenUpdateError(`UrbanIQ only accepts locations in ${serviceRegion()?.name}.`);
+  }
   const [rules, departments] = await Promise.all([prisma.routingRule.findMany(), prisma.department.findMany()]);
 
   await prisma.$transaction(async (tx) => {
@@ -161,14 +164,14 @@ export async function applyCitizenUpdate(token: string, input: z.infer<typeof Ci
     const data: Record<string, unknown> = { needsReevaluation: true };
     let reviewReasons = ticket.reviewReasons;
     const isPrimary = r.linkType === "ORIGINAL" || r.linkType === null;
-    if (loc && isPrimary && newLoc.wardCode && (newLoc.precise || !ticket.locationPrecise)) {
+    if (loc && isPrimary && newLoc.lat != null && !newLoc.outsideBoundary && (newLoc.precise || !ticket.locationPrecise)) {
       Object.assign(data, { lat: newLoc.lat, lng: newLoc.lng, locationPrecise: newLoc.precise, wardCode: newLoc.wardCode, landmark: newLoc.landmark, locationText: newLoc.text });
       await tx.report.update({ where: { id: r.id }, data: { wardCode: newLoc.wardCode } });
       reviewReasons = reviewReasons.filter((x) => x !== "Location too vague to route" && !x.startsWith("Approximate location") && !x.startsWith("Ownership uncertain"));
       if (!newLoc.precise) reviewReasons.push(`Approximate location from landmark (${newLoc.landmark}) — confirm`);
       let departmentId = ticket.departmentId;
       if (!departmentId) {
-        const route = resolveRoute(rules, ticket.subtype, newLoc.wardCode);
+        const route = resolveRoute(wardsEnabled() ? rules : rules.filter((x) => x.wardCode === "*"), ticket.subtype, newLoc.wardCode);
         if (route.status === "routed") {
           departmentId = route.departmentId;
           data.departmentId = departmentId;

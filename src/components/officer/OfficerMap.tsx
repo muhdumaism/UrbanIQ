@@ -23,7 +23,7 @@ export function OfficerMap({ rows, selectedId, hoveredId, onSelect }: { rows: Qu
     if (!webglAvailable()) return setFailed(true);
     let map: maplibregl.Map;
     try {
-      map = createCityMap(box.current);
+      map = createCityMap(box.current, {}, false);
     } catch {
       return setFailed(true);
     }
@@ -34,11 +34,18 @@ export function OfficerMap({ rows, selectedId, hoveredId, onSelect }: { rows: Qu
       addWardLabels(map);
       setReady(true);
     });
+    const onCmd = (e: Event) => {
+      const cmd = (e as CustomEvent<string>).detail;
+      if (cmd === "zoomIn") map.zoomIn();
+      if (cmd === "zoomOut") map.zoomOut();
+    };
+    window.addEventListener("urbaniq:map", onCmd);
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(box.current);
     const all = markers.current;
     return () => {
       ro.disconnect();
+      window.removeEventListener("urbaniq:map", onCmd);
       all.clear();
       map.remove();
     };
