@@ -1,5 +1,6 @@
 import { env, isDemoMode, triageEngine } from "./env";
-import { smsReady } from "./sms";
+import { resendConfigured } from "./email-verification";
+import { googleConfigured } from "./google-auth";
 import { municipality, serviceRegion } from "./municipality";
 
 type Check = { name: string; ok: boolean | null; value: string; help?: string };
@@ -46,11 +47,12 @@ export async function systemStatus(): Promise<Check[]> {
     },
     await probeVision(),
     {
-      name: "Citizen SMS sign-in",
-      ok: smsReady(),
-      value: e.SMS_PROVIDER === "console" ? (isDemoMode() ? "Demo: code shown on screen" : "Not configured") : `${e.SMS_PROVIDER.toUpperCase()}${smsReady() ? "" : " (missing credentials)"}`,
-      help: smsReady() ? undefined : "Set SMS_PROVIDER=msg91 with MSG91_AUTH_KEY and MSG91_TEMPLATE_ID (or Twilio) to send real SMS codes.",
+      name: "Google sign-in",
+      ok: googleConfigured(),
+      value: googleConfigured() ? "Configured" : "Not configured",
+      help: googleConfigured() ? undefined : "Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
     },
+    { name: "Account verification email", ok: resendConfigured(), value: resendConfigured() ? "Configured" : "Not configured", help: "Set RESEND_API_KEY and RESEND_FROM_EMAIL using a verified sender domain." },
     { name: "Service area", ok: null, value: region ? `${region.name} only` : "Anywhere" },
     { name: "Wards", ok: null, value: municipality().mode === "none" ? "No ward boundaries (city-wide routing)" : municipality().mode === "sample" ? "Sample wards (fictional)" : `${municipality().wards.length} configured wards` },
   ];

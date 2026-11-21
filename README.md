@@ -94,7 +94,7 @@ flowchart LR
 - ✅ Explicit location confirmation before submission. The draft is saved locally if anything fails.
 - 🔗 A private, unguessable tracking link with a status timeline, department, resolution note, answers to the city's questions, and location corrections.
 
-- 📱 **Optional mobile sign-in.** Citizens can sign in with an Indian mobile number and a one-time SMS code to keep all their reports under **My reports**. Reporting without an account still works.
+- 📱 **Optional Google sign-in.** Citizens can sign in with Google and verify their account by email to keep all their reports under **My reports**. Reporting without an account still works.
 
 **For officers**
 - 📍 **Your area first.** The dashboard detects where the officer is working from (browser location, never sent to the server), centres the map there, shows each ticket's distance and filters to *within 2 / 5 / 10 / 25 km of me*.
@@ -188,24 +188,46 @@ VISION_TOKEN="…"                          # same value on both services
 </details>
 
 <details>
-<summary><b>📱 Citizen SMS sign-in (MSG91 / Twilio)</b></summary>
+<summary><b>Citizen Google sign-in and Resend verification</b></summary>
+
+Create a Google OAuth **Web application** client and configure:
 
 ```env
-SMS_PROVIDER="msg91"            # or "twilio"
-MSG91_AUTH_KEY="…"
-MSG91_TEMPLATE_ID="…"           # DLT-approved OTP template containing ##OTP##
+APP_BASE_URL="https://your-urbaniq-domain.example"
+GOOGLE_CLIENT_ID="..."
+GOOGLE_CLIENT_SECRET="..."
+RESEND_API_KEY="..."
+RESEND_FROM_EMAIL="UrbanIQ <signin@your-verified-domain.example>"
 ```
 
-* Codes are 6 digits, valid for 5 minutes and single use, with 5 attempts per code.
-* Sending is limited to 3 codes per number every 10 minutes, with a 30-second resend cooldown.
-* Only an HMAC of each code is stored.
-* With `SMS_PROVIDER=console`, demo mode shows the code on screen, and production refuses to send.
+Register the exact authorized redirect URI in Google Cloud:
+`https://your-urbaniq-domain.example/api/citizen/google/callback`.
+For local development use `http://localhost:3000/api/citizen/google/callback`
+and set `APP_BASE_URL=http://localhost:3000`. Add test users while the Google
+consent screen is in testing mode. These are server variables, separate from Google Maps keys.
+
+Verify your sender domain in Resend. Its test sender is restricted to approved test recipients;
+use your verified domain for other users. Apply migrations with `npm run db:migrate`, then restart.
+Allow outbound HTTPS to `oauth2.googleapis.com`, `openidconnect.googleapis.com`, and
+`api.resend.com`; users' browsers also need `accounts.google.com`.
+
+Run provider contract tests with `npx vitest run --config vitest.auth.config.mts`;
+`npm test` also runs database-backed account/session tests.
+
+New citizens sign in with Google, then receive a Resend email with a single-use,
+15-minute verification link. Clicking the link opens a confirmation page; confirming
+creates the citizen session. Returning verified users sign in directly with Google.
+If delivery fails or the link expires, start Google sign-in again to request a new link.
+Google emails must be verified. Accounts are identified by Google's stable subject;
+legacy phone accounts are preserved but are not automatically linked or accessible
+through the removed SMS login. Anonymous reporting and officer login remain available.
+
 </details>
 
 <details>
 <summary><b>🩺 Is YOLO working? System status</b></summary>
 
-Officers can open **Status** (top-right of the dashboard, `/officer/system`). It shows the triage engine, whether the YOLO service is reachable and has its model loaded, and whether SMS is configured. It also has a **Test the photo detector** upload, which shows exactly what YOLO detects in any photo, with boxes and confidence. Nothing is saved.
+Officers can open **Status** (top-right of the dashboard, `/officer/system`). It shows the triage engine, whether the YOLO service is reachable and has its model loaded, and whether Google sign-in and verification email are configured. It also has a **Test the photo detector** upload, which shows exactly what YOLO detects in any photo, with boxes and confidence. Nothing is saved.
 </details>
 
 <details>
@@ -304,7 +326,7 @@ This deletes every report, ticket and photo, and keeps departments, routing rule
 | Core UI flows: pothole → High/Roads, duplicate linking, Critical wire + urgent review, photo-only, officer lifecycle, access control, mobile | `node verification/e2e.mjs` | **27 / 27** |
 | Maps + vision UI flows: all five detector types, no-vision model, location permission denied, ward match, out-of-area, Maps unavailable, pin ↔ queue sync | `node verification/e2e-maps-vision.mjs` | **25 / 25** |
 | India profile: region-restricted search, out-of-India rejection, officer location + distance filter, heatmap | `node verification/e2e-india.mjs` | **15 / 15** |
-| Citizen mobile sign-in, My reports, officer system status + detector test | `node verification/e2e-citizen.mjs` | **11 / 11** |
+| Citizen Google sign-in entry, My reports, officer system status + detector test | `node verification/e2e-citizen.mjs` | Requires current validation |
 | Vision service (fake model): mapping, auth, missing model, checksum pin, class-map mismatch | `cd vision && pytest -q` | **6 / 6** |
 | Typecheck, lint, production build | `npm run typecheck && npm run lint && npm run build` | ✔ |
 

@@ -45,7 +45,7 @@ export function Nav({ signedIn = false }: { signedIn?: boolean }) {
       </div>
       {open && (
         <nav id="mobile-nav" aria-label="Mobile" className="border-t border-zinc-200 px-5 pb-5 pt-2 md:hidden">
-          {[...LINKS, (signedIn ? ["My reports", "/me"] : ["Sign in with mobile", "/login"]) as readonly [string, string], ["Officer sign in", "/officer/login"] as const].map(([l, h]) => (
+          {[...LINKS, (signedIn ? ["My reports", "/me"] : ["Sign in", "/login"]) as readonly [string, string], ["Officer sign in", "/officer/login"] as const].map(([l, h]) => (
             <Link key={h} href={h} onClick={() => setOpen(false)} className="block rounded-lg px-2 py-3 text-[15px] text-zinc-700 hover:bg-zinc-100">
               {l}
             </Link>

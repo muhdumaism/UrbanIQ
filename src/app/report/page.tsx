@@ -3,7 +3,7 @@ import { ReportForm } from "@/components/ReportForm";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ModeBanner } from "@/components/ModeBanner";
 import { modeInfo } from "@/lib/mode";
-import { currentCitizen, maskPhone } from "@/lib/citizen-auth";
+import { currentCitizen } from "@/lib/citizen-auth";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "Report an issue" };
@@ -25,7 +25,7 @@ export default async function ReportPage() {
         <p className="mt-4 rounded-xl border border-line bg-surface px-4 py-3 text-sm text-ink-2">
           {citizen ? (
             <>
-              Signed in as <strong className="text-ink">{maskPhone(citizen.phone)}</strong> — this report will appear in{" "}
+              Signed in as <strong className="text-ink">{citizen.email ?? "Citizen"}</strong> — this report will appear in{" "}
               <Link href="/me" className="underline underline-offset-2">
                 My reports
               </Link>

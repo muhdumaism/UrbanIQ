@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { SiteHeader } from "@/components/SiteHeader";
 import { CitizenSignOut } from "@/components/CitizenSignOut";
-import { currentCitizen, maskPhone } from "@/lib/citizen-auth";
+import { currentCitizen } from "@/lib/citizen-auth";
 import { prisma } from "@/lib/db";
 import { trackingTokenFor } from "@/lib/tokens";
 import { PUBLIC_STATUS_LABEL, type TicketStatusCode } from "@/lib/taxonomy";
@@ -23,7 +23,7 @@ export default async function MyReports() {
       <main id="main" className="mx-auto max-w-2xl px-4 py-10">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">{maskPhone(citizen.phone)}</p>
+            <p className="eyebrow">{citizen.email ?? "Citizen"}</p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight">My reports</h1>
           </div>
           <div className="flex gap-2">

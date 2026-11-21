@@ -182,7 +182,7 @@ model Report {
   severityReason    String?
   ticketId          String?
   ticket            Ticket?        @relation(fields: [ticketId], references: [id])
-  /// Set when the citizen was signed in (mobile OTP) while reporting. Reports can still be anonymous.
+  /// Set when the citizen was signed in while reporting. Reports can still be anonymous.
   citizenId         String?
   citizen           Citizen?       @relation(fields: [citizenId], references: [id], onDelete: SetNull)
   linkType          LinkType?
@@ -318,10 +318,12 @@ model Counter {
   value Int
 }
 
-/// Citizen account identified only by a verified Indian mobile number (E.164, e.g. +919812345678).
+/// Citizen account with a verified Google or email identity. Legacy phone accounts are retained.
 model Citizen {
   id          String           @id @default(cuid())
-  phone       String           @unique
+  phone       String?          @unique
+  email       String?          @unique
+  googleSub   String?          @unique
   createdAt   DateTime         @default(now())
   lastLoginAt DateTime?
   sessions    CitizenSession[]
@@ -348,4 +350,15 @@ model OtpChallenge {
   createdAt  DateTime  @default(now())
 
   @@index([phone, createdAt])
+}
+
+model CitizenEmailVerification {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  googleSub String
+  email String
+  next String @default("/me")
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
 }

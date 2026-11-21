@@ -30,13 +30,10 @@ const EnvSchema = z.object({
   /** Initial map view when there are no wards to fit, e.g. "12.9716,77.5946" */
   MAP_DEFAULT_CENTER: z.string().regex(/^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/).optional().or(z.literal("")),
   MAP_DEFAULT_ZOOM: z.coerce.number().min(1).max(20).optional(),
-  /** console = no SMS sent (code shown on screen in demo mode only) · msg91 · twilio */
-  SMS_PROVIDER: z.enum(["console", "msg91", "twilio"]).default("console"),
-  MSG91_AUTH_KEY: z.string().optional(),
-  MSG91_TEMPLATE_ID: z.string().optional(),
-  TWILIO_ACCOUNT_SID: z.string().optional(),
-  TWILIO_AUTH_TOKEN: z.string().optional(),
-  TWILIO_FROM: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  RESEND_FROM_EMAIL: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
   STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
   LOCAL_STORAGE_DIR: z.string().default("./storage/uploads"),
   S3_BUCKET: z.string().optional(),

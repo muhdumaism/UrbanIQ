@@ -14,6 +14,7 @@ export async function resetDb() {
   await prisma.officerSession.deleteMany();
   await prisma.citizenSession.deleteMany();
   await prisma.otpChallenge.deleteMany();
+  await prisma.citizenEmailVerification.deleteMany();
   await prisma.citizen.deleteMany();
   await prisma.officer.deleteMany();
   await prisma.department.deleteMany();

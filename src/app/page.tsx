@@ -116,7 +116,7 @@ export default async function Home() {
               <dl className="lp-in mt-12 grid max-w-md grid-cols-3 gap-6 border-t border-zinc-200 pt-6" style={{ ["--d" as string]: "320ms" }}>
                 {[
                   ["< 1 min", "to report"],
-                  ["OTP", "sign-in, optional"],
+                  ["Google", "sign-in, optional"],
                   ["24×7", "tracking link"],
                 ].map(([v, l]) => (
                   <div key={l}>
