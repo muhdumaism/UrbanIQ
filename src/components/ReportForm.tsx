@@ -25,6 +25,24 @@ export function ReportForm() {
   const keyRef = useRef<string>("");
   const summaryRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Instant YOLO photo check (advisory). `seq` ignores responses for a photo that was since replaced/removed.
+  const [detect, setDetect] = useState<{ state: "idle" | "checking" | "done"; message: string | null; detected: boolean }>({ state: "idle", message: null, detected: false });
+  const detectSeq = useRef(0);
+
+  const checkPhoto = async (f: File) => {
+    const seq = ++detectSeq.current;
+    setDetect({ state: "checking", message: null, detected: false });
+    try {
+      const fd = new FormData();
+      fd.set("photo", f);
+      const res = await fetch("/api/vision/preview", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (seq !== detectSeq.current) return;
+      setDetect({ state: "done", message: res.ok ? (data.message ?? null) : null, detected: data.status === "detected" });
+    } catch {
+      if (seq === detectSeq.current) setDetect({ state: "done", message: null, detected: false });
+    }
+  };
 
   // Restore draft (text + location + idempotency key). Photos are not stored locally.
   useEffect(() => {
@@ -61,11 +79,14 @@ export function ReportForm() {
     if (preview) URL.revokeObjectURL(preview);
     setPhoto(f);
     setPreview(URL.createObjectURL(f));
+    void checkPhoto(f);
   };
   const removePhoto = () => {
     if (preview) URL.revokeObjectURL(preview);
     setPhoto(null);
     setPreview(null);
+    detectSeq.current++;
+    setDetect({ state: "idle", message: null, detected: false });
     if (fileRef.current) fileRef.current.value = "";
   };
 
@@ -214,6 +235,23 @@ export function ReportForm() {
               <button type="button" onClick={removePhoto} className="btn-outline btn-sm">
                 Remove photo
               </button>
+            </div>
+            <div aria-live="polite" data-testid="photo-detect">
+              {detect.state === "checking" && (
+                <p className="flex items-center gap-2 border-t border-line px-4 py-2.5 text-sm text-muted">
+                  <span className="size-3.5 animate-spin rounded-full border-2 border-line-strong border-t-accent" aria-hidden="true" />
+                  Checking photo…
+                </p>
+              )}
+              {detect.state === "done" && detect.message && (
+                <p className={`flex items-start gap-2 border-t px-4 py-2.5 text-sm ${detect.detected ? "border-[#ffb98f] bg-accent-soft text-accent-ink" : "border-line bg-paper text-ink-2"}`}>
+                  <span aria-hidden="true">{detect.detected ? "🔍" : "ℹ️"}</span>
+                  <span>
+                    {detect.message}
+                    {detect.detected && <span className="text-muted"> Automatic check: the city team will confirm.</span>}
+                  </span>
+                </p>
+              )}
             </div>
           </div>
         ) : (
