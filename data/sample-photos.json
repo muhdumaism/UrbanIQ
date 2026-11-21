@@ -1,0 +1,84 @@
+[
+ {
+  "file": "/samples/flooded-pothole.jpg",
+  "sha256": "4b57fe1fcf3680956d5b04e3aa924c5a755e23c9deb95b0b1e7925b8388f8bb2",
+  "subtype": "pothole",
+  "observations": [
+   "Large pothole filled with muddy water across most of one traffic lane",
+   "A traffic cone has been placed beside the pothole",
+   "School warning sign visible beside the road"
+  ],
+  "factors": [
+   {
+    "factor": "significant_hazard",
+    "detail": "Photo shows a large water-filled pothole in the carriageway"
+   },
+   {
+    "factor": "major_obstruction",
+    "detail": "Photo shows the pothole occupying most of one lane"
+   },
+   {
+    "factor": "vulnerable_location",
+    "detail": "Photo shows a school warning sign nearby"
+   }
+  ],
+  "locationClues": [
+   "School warning sign"
+  ]
+ },
+ {
+  "file": "/samples/sparking-wire.jpg",
+  "sha256": "fad11d6b3b59194843ef730cdb2a6d5355e7610c5717908ea74a595a0fb0e3d4",
+  "subtype": "downed_wire",
+  "observations": [
+   "A cable hangs from a utility pole down to footpath level",
+   "A bus shelter is a few metres from the cable end",
+   "The photo cannot show whether the cable is live"
+  ],
+  "factors": [
+   {
+    "factor": "electrical_contact_risk",
+    "detail": "Photo shows a cable hanging to footpath level; live status not visible"
+   },
+   {
+    "factor": "vulnerable_location",
+    "detail": "Photo shows a bus shelter next to the cable"
+   }
+  ],
+  "locationClues": [
+   "Bus shelter"
+  ]
+ },
+ {
+  "file": "/samples/overflowing-bin.jpg",
+  "sha256": "129a6e3c1146c94ad6ddda9aa08ecdef837aa22458c49c582c8ea7763c02b89f",
+  "subtype": "overflowing_bin",
+  "observations": [
+   "Public waste bin overflowing with bags",
+   "Bags and litter spilling across part of the footpath"
+  ],
+  "factors": [
+   {
+    "factor": "public_space_affected",
+    "detail": "Photo shows waste spilling across part of the footpath"
+   }
+  ],
+  "locationClues": []
+ },
+ {
+  "file": "/samples/fallen-tree.jpg",
+  "sha256": "d81986493e3794fe91ad1834333da0cd22bfcbf95ca0b5caf1a32fd1fff38c82",
+  "subtype": "fallen_tree",
+  "observations": [
+   "A large tree lies across the road",
+   "Both lanes appear blocked by the trunk and canopy"
+  ],
+  "factors": [
+   {
+    "factor": "major_obstruction",
+    "detail": "Photo shows a fallen tree across both lanes"
+   }
+  ],
+  "locationClues": []
+ }
+]

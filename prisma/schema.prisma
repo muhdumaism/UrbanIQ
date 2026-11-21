@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  ROADS
+  WASTE
+  WATER_SUPPLY
+  STREETLIGHTING
+  ELECTRICAL_HAZARDS
+  TREES
+  STORMWATER_DRAINAGE
+  SEWERAGE
+  OTHER
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TicketStatus {
+  NEW
+  NEEDS_REVIEW
+  WAITING_FOR_DETAILS
+  ACKNOWLEDGED
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum ReportStatus {
+  RECEIVED
+  PROCESSING
+  TRIAGED
+  FAILED
+}
+
+enum LocationSource {
+  DEVICE
+  PIN
+  LANDMARK
+  NONE
+}
+
+enum LinkType {
+  ORIGINAL
+  AUTO_LINKED
+  OFFICER_LINKED
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum SuggestionKind {
+  POSSIBLE_DUPLICATE
+  POSSIBLE_RECURRENCE
+}
+
+enum SuggestionStatus {
+  PENDING
+  CONFIRMED
+  DISMISSED
+}
+
+enum OfficerRole {
+  OFFICER
+  SUPERVISOR
+}
+
+enum ActorType {
+  SYSTEM
+  OFFICER
+  CITIZEN
+}
+
+enum Visibility {
+  PUBLIC
+  INTERNAL
+}
+
+enum InfoRequestKind {
+  LOCATION
+  DETAIL
+}
+
+enum InfoRequestStatus {
+  OPEN
+  ANSWERED
+  CANCELLED
+}
+
+model Department {
+  id           String        @id @default(cuid())
+  code         String        @unique
+  name         String
+  officers     Officer[]
+  tickets      Ticket[]
+  routingRules RoutingRule[]
+}
+
+/// Configurable routing: subtype + ward (or "*" for city-wide). Most specific active rule wins.
+model RoutingRule {
+  id           String     @id @default(cuid())
+  subtype      String
+  wardCode     String     @default("*")
+  departmentId String
+  department   Department @relation(fields: [departmentId], references: [id])
+  active       Boolean    @default(true)
+  note         String?
+  createdAt    DateTime   @default(now())
+
+  @@unique([subtype, wardCode])
+}
+
+model Officer {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  name         String
+  passwordHash String
+  role         OfficerRole      @default(OFFICER)
+  departmentId String?
+  department   Department?      @relation(fields: [departmentId], references: [id])
+  isDemo       Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  sessions     OfficerSession[]
+  events       TicketEvent[]
+}
+
+model OfficerSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  officerId String
+  officer   Officer  @relation(fields: [officerId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+/// A single citizen submission. Never deleted or overwritten; corrections are appended as events.
+model Report {
+  id                String         @id @default(cuid())
+  reference         String         @unique
+  trackingTokenHash String         @unique
+  idempotencyKey    String         @unique
+  text              String?
+  photoKey          String?
+  photoMime         String?
+  photoWidth        Int?
+  photoHeight       Int?
+  /// sha256 of the original upload bytes (lets the demo adapter recognise bundled sample photos)
+  photoFingerprint  String?
+  lat               Float?
+  lng               Float?
+  locationText      String?
+  locationSource    LocationSource @default(NONE)
+  locationConfirmed Boolean        @default(false)
+  wardCode          String?
+  status            ReportStatus   @default(RECEIVED)
+  /// Validated AI extraction (TriageResult) — evidence only, never authority.
+  triage            Json?
+  triageProvider    String?
+  triageError       String?
+  /// Severity the backend computed from this report's own evidence.
+  severity          Severity?
+  severityReason    String?
+  ticketId          String?
+  ticket            Ticket?        @relation(fields: [ticketId], references: [id])
+  linkType          LinkType?
+  /// Seeded illustrative data (labelled "Sample" in the UI)
+  isSample          Boolean        @default(false)
+  submittedAt       DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  jobs              Job[]
+  infoRequests      InfoRequest[]
+  suggestions       DuplicateSuggestion[]
+  events            TicketEvent[]
+
+  @@index([ticketId])
+}
+
+model Ticket {
+  id                String         @id @default(cuid())
+  reference         String         @unique
+  title             String
+  summary           String
+  category          Category
+  subtype           String
+  severity          Severity
+  severityReason    String
+  status            TicketStatus   @default(NEW)
+  departmentId      String?
+  department        Department?    @relation(fields: [departmentId], references: [id])
+  urgentReview      Boolean        @default(false)
+  needsReevaluation Boolean        @default(false)
+  reviewReasons     String[]       @default([])
+  lat               Float?
+  lng               Float?
+  /// true when coordinates come from a citizen-confirmed pin/device (not a landmark guess)
+  locationPrecise   Boolean        @default(false)
+  landmark          String?
+  wardCode          String?
+  locationText      String?
+  publicNote        String?
+  resolutionNote    String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  resolvedAt        DateTime?
+  mergedIntoId      String?
+  isSample          Boolean        @default(false)
+  reports           Report[]
+  events            TicketEvent[]
+  infoRequests      InfoRequest[]
+  suggestions       DuplicateSuggestion[] @relation("candidate")
+  ownSuggestions    DuplicateSuggestion[] @relation("source")
+
+  @@index([status, severity, createdAt])
+  @@index([subtype, status])
+}
+
+/// Possible duplicate/recurrence that needs an officer decision.
+model DuplicateSuggestion {
+  id               String           @id @default(cuid())
+  kind             SuggestionKind
+  status           SuggestionStatus @default(PENDING)
+  reportId         String
+  report           Report           @relation(fields: [reportId], references: [id])
+  /// Ticket the new report currently belongs to.
+  sourceTicketId   String
+  sourceTicket     Ticket           @relation("source", fields: [sourceTicketId], references: [id])
+  /// Existing ticket it may duplicate.
+  candidateTicketId String
+  candidateTicket  Ticket           @relation("candidate", fields: [candidateTicketId], references: [id])
+  score            Float
+  distanceMeters   Float?
+  explanation      String
+  decidedById      String?
+  decidedAt        DateTime?
+  createdAt        DateTime         @default(now())
+}
+
+model InfoRequest {
+  id         String            @id @default(cuid())
+  ticketId   String
+  ticket     Ticket            @relation(fields: [ticketId], references: [id])
+  reportId   String
+  report     Report            @relation(fields: [reportId], references: [id])
+  kind       InfoRequestKind
+  question   String
+  status     InfoRequestStatus @default(OPEN)
+  answer     String?
+  createdAt  DateTime          @default(now())
+  answeredAt DateTime?
+}
+
+/// Append-only audit trail. PUBLIC events appear on citizen tracking pages.
+model TicketEvent {
+  id         String     @id @default(cuid())
+  ticketId   String
+  ticket     Ticket     @relation(fields: [ticketId], references: [id])
+  reportId   String?
+  report     Report?    @relation(fields: [reportId], references: [id])
+  actorType  ActorType
+  officerId  String?
+  officer    Officer?   @relation(fields: [officerId], references: [id])
+  type       String
+  visibility Visibility @default(INTERNAL)
+  /// Citizen-facing text (only shown when visibility = PUBLIC)
+  publicMessage String?
+  note       String?
+  before     Json?
+  after      Json?
+  createdAt  DateTime   @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+/// Durable background work queue (claimed with FOR UPDATE SKIP LOCKED).
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  reportId    String
+  report      Report    @relation(fields: [reportId], references: [id])
+  status      JobStatus @default(PENDING)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  runAfter    DateTime  @default(now())
+  lockedAt    DateTime?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, runAfter])
+}
+
+model Counter {
+  name  String @id
+  value Int
+}

@@ -1,0 +1,18 @@
+{
+ "name": "Port Alder",
+ "note": "Fictional municipality. All wards, streets, landmarks and reports are sample data.",
+ "center": [
+  -20,
+  -30
+ ],
+ "bounds": [
+  [
+   -20.043566,
+   -30.027027
+  ],
+  [
+   -19.956434,
+   -29.972973
+  ]
+ ]
+}

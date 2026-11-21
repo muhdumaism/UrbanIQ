@@ -1,0 +1,129 @@
+[
+ {
+  "name": "Alder Primary School",
+  "aliases": [
+   "alder primary",
+   "alder school",
+   "primary school"
+  ],
+  "lng": -19.991909,
+  "lat": -30.01036,
+  "wardCode": "W2"
+ },
+ {
+  "name": "Northgate High School",
+  "aliases": [
+   "northgate high",
+   "northgate school",
+   "high school"
+  ],
+  "lng": -20.002075,
+  "lat": -29.987387,
+  "wardCode": "W5"
+ },
+ {
+  "name": "Central Bus Station",
+  "aliases": [
+   "bus station",
+   "central station",
+   "bus stand"
+  ],
+  "lng": -20.023857,
+  "lat": -30.002252,
+  "wardCode": "W1"
+ },
+ {
+  "name": "Quay Road Bus Stop",
+  "aliases": [
+   "quay road stop",
+   "quay bus stop"
+  ],
+  "lng": -20.015559,
+  "lat": -30.015495,
+  "wardCode": "W1"
+ },
+ {
+  "name": "Riverside Market",
+  "aliases": [
+   "market",
+   "riverside market"
+  ],
+  "lng": -20.026969,
+  "lat": -29.991441,
+  "wardCode": "W4"
+ },
+ {
+  "name": "Port Alder Clinic",
+  "aliases": [
+   "clinic",
+   "health centre",
+   "health center",
+   "hospital"
+  ],
+  "lng": -19.986515,
+  "lat": -29.996396,
+  "wardCode": "W6"
+ },
+ {
+  "name": "Millbrook Park",
+  "aliases": [
+   "millbrook park",
+   "park"
+  ],
+  "lng": -19.971993,
+  "lat": -30.010811,
+  "wardCode": "W3"
+ },
+ {
+  "name": "Old Town Square",
+  "aliases": [
+   "town square",
+   "old town square",
+   "square"
+  ],
+  "lng": -19.998963,
+  "lat": -30.005405,
+  "wardCode": "W2"
+ },
+ {
+  "name": "Eastfield Library",
+  "aliases": [
+   "library",
+   "eastfield library"
+  ],
+  "lng": -19.973031,
+  "lat": -29.986486,
+  "wardCode": "W6"
+ },
+ {
+  "name": "Harbour Ferry Terminal",
+  "aliases": [
+   "ferry terminal",
+   "ferry",
+   "harbour"
+  ],
+  "lng": -20.031118,
+  "lat": -30.018018,
+  "wardCode": "W1"
+ },
+ {
+  "name": "Northgate Community Hall",
+  "aliases": [
+   "community hall",
+   "northgate hall"
+  ],
+  "lng": -19.996888,
+  "lat": -29.982883,
+  "wardCode": "W5"
+ },
+ {
+  "name": "Elm Street Playground",
+  "aliases": [
+   "playground",
+   "elm playground"
+  ],
+  "lng": -20.016596,
+  "lat": -29.988288,
+  "wardCode": "W4"
+ }
+]
