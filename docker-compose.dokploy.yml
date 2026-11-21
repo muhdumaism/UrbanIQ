@@ -1,0 +1,68 @@
+# UrbanIQ on Dokploy (Compose deployment type).
+# In Dokploy: Create Service → Compose → this repo → Compose path: ./docker-compose.dokploy.yml
+# Set the variables below in the Environment tab, then add a Domain for service "app", port 3000.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
+        NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: ${NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID:-}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://urbaniq:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/urbaniq?schema=public
+      APP_SECRET: ${APP_SECRET:?set APP_SECRET (openssl rand -hex 32)}
+      APP_BASE_URL: ${APP_BASE_URL:?set APP_BASE_URL e.g. https://urbaniq.example.gov}
+      CIVICFLOW_MODE: ${CIVICFLOW_MODE:-demo}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-claude-opus-5-5}
+      VISION_URL: ${VISION_URL:-}
+      VISION_TOKEN: ${VISION_TOKEN:-}
+      WARDS_GEOJSON_PATH: ${WARDS_GEOJSON_PATH:-}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-auto}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-}
+    volumes:
+      - uploads:/app/storage
+    expose:
+      - "3000"
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: urbaniq
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: urbaniq
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urbaniq -d urbaniq"]
+      interval: 5s
+      retries: 20
+
+  # Private CPU photo analysis. Disabled unless COMPOSE_PROFILES=vision.
+  # Weights are NOT in the repo — mount them (after reuse permission is cleared; see vision/README.md).
+  vision:
+    profiles: ["vision"]
+    build: ./vision
+    restart: unless-stopped
+    environment:
+      VISION_TOKEN: ${VISION_TOKEN:-}
+      EXPECTED_SHA256: ${VISION_EXPECTED_SHA256:-11a5db9c6ad7252bcd336d6c7d84630f504683e7429f9e71d6bc7cc8af75ea81}
+    volumes:
+      - ../files/models:/models:ro   # Dokploy "files" mount; put civic_guardian.pt here
+    expose:
+      - "8000"
+
+volumes:
+  pgdata:
+  uploads:

@@ -24,6 +24,7 @@
   <a href="#-how-it-works">How it works</a> ·
   <a href="#-features">Features</a> ·
   <a href="#-live-integrations">Integrations</a> ·
+  <a href="#-deploy-on-dokploy">Deploy</a> ·
   <a href="#-verification">Verification</a> ·
   <a href="#-project-structure">Structure</a>
 </p>
@@ -205,6 +206,43 @@ NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID="…"
 * UrbanIQ stores only the citizen's own data (their words and the pin they confirmed) and the Google **Place ID**.
 * Place names are fetched live for officers and shown with attribution.
 </details>
+
+## 🐳 Deploy on Dokploy
+
+UrbanIQ ships a production [`Dockerfile`](Dockerfile) and a [`docker-compose.dokploy.yml`](docker-compose.dokploy.yml) for Dokploy's **Compose** deployment type. The compose file defines the app, PostgreSQL and the optional private vision service.
+
+**Option A: Compose (recommended, includes Postgres)**
+
+1. Dokploy → *Create Service* → **Compose** → connect this repository, branch `main`, compose path `./docker-compose.dokploy.yml`.
+2. In **Environment**, set at least:
+   ```env
+   POSTGRES_PASSWORD=change-me
+   APP_SECRET=<openssl rand -hex 32>
+   APP_BASE_URL=https://urbaniq.example.gov
+   CIVICFLOW_MODE=demo            # or live (+ ANTHROPIC_API_KEY)
+   SEED_DEMO_DATA=true            # first deploy only, then set back to false (it resets data!)
+   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=   # optional, build-time
+   NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=    # optional, build-time
+   ```
+3. Under **Domains**, add your domain for service **`app`**, port **3000**, with HTTPS on.
+4. Deploy.
+
+**Option B: Application (Dockerfile) + managed Postgres**
+
+1. Create a Dokploy **PostgreSQL** database. Then create an **Application** from this repo with build type **Dockerfile**.
+2. Set `DATABASE_URL` to the internal connection string, along with the variables above. Pass the `NEXT_PUBLIC_*` values as **build arguments**.
+3. Mount a volume at `/app/storage` (private photo uploads), or set `STORAGE_DRIVER=s3` and the `S3_*` variables.
+4. Add a domain on port 3000.
+
+**What the container does on start**
+
+* Runs `prisma migrate deploy`, unless `RUN_MIGRATIONS=false`.
+* Optionally seeds demo data.
+* Starts the server with the background triage worker built in.
+* Health check: `GET /api/health` (app + database).
+* Other commands: `docker run … worker`, `… migrate` and `… seed`.
+
+**Photo analysis:** enable the `vision` profile (`COMPOSE_PROFILES=vision`) only after the YOLO weights are cleared for reuse. It never gets a public domain. See [vision/README.md](vision/README.md).
 
 ## ✅ Verification
 

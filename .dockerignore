@@ -1,0 +1,14 @@
+.git
+node_modules
+.next
+.env
+.env.*
+!.env.example
+storage
+verification/screenshots
+docs/screenshots
+vision
+*.pt
+*.log
+.pytest_cache
+__pycache__
