@@ -31,6 +31,10 @@
 
 ---
 
+**Officer panel Login info:**
+mail : umais@urbaniq.com
+pass : muhdumaism@120
+
 ## ✨ Why UrbanIQ
 
 Cities receive thousands of complaints that arrive as free text, blurry photos and vague locations ("near the
