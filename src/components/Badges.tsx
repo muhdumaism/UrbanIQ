@@ -25,7 +25,7 @@ const STATUS_STYLE: Record<TicketStatusCode, string> = {
   NEEDS_REVIEW: "border-[#e7b7b5] bg-crit-soft text-crit",
   WAITING_FOR_DETAILS: "border-[#ecd894] bg-med-soft text-med",
   ACKNOWLEDGED: "border-[#c9d6e5] bg-low-soft text-low",
-  IN_PROGRESS: "border-[#b9d36a] bg-accent-soft text-accent-ink",
+  IN_PROGRESS: "border-[#ffb98f] bg-accent-soft text-accent-ink",
   RESOLVED: "border-line bg-paper text-muted",
 };
 

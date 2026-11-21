@@ -69,8 +69,8 @@ export function StaticCityMap({
         })}
       {pins.map((p, i) => (
         <g key={i} transform={`translate(${x(p.lng)},${y(p.lat)}) scale(${scale})`}>
-          {p.ring && <circle r={22} fill="none" stroke={p.color ?? "#cdeb3f"} strokeOpacity={0.45} strokeWidth={6} />}
-          <circle r={9} fill={p.color ?? "#cdeb3f"} stroke="#0d1013" strokeWidth={3} />
+          {p.ring && <circle r={22} fill="none" stroke={p.color ?? "#ff6b1a"} strokeOpacity={0.45} strokeWidth={6} />}
+          <circle r={9} fill={p.color ?? "#ff6b1a"} stroke="#0d1013" strokeWidth={3} />
         </g>
       ))}
     </svg>

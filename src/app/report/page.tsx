@@ -20,7 +20,7 @@ export default function ReportPage() {
           Tell us what you see and where. If someone is in immediate danger, call your local emergency number first.
         </p>
         <div className="mt-8">
-          <ReportForm demo={mode.demo} />
+          <ReportForm />
         </div>
       </main>
     </>

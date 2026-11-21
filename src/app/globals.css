@@ -12,10 +12,11 @@
   --color-muted: #63676e;
   --color-line: #e2e2da;
   --color-line-strong: #c9c9bf;
-  --color-accent: #cdeb3f;
-  --color-accent-hover: #bddc2c;
-  --color-accent-ink: #3b4d00;
-  --color-accent-soft: #f2fad0;
+  --color-accent: #ff6b1a;
+  --color-accent-hover: #ff8547;
+  --color-brand: #ff6b1a;
+  --color-accent-ink: #9a3a00;
+  --color-accent-soft: #fff1e8;
 
   --color-night: #0d1013;
   --color-night-2: #151a1f;
@@ -57,7 +58,7 @@
 }
 
 @utility btn-primary {
-  @apply btn bg-accent text-ink hover:bg-accent-hover border border-[#a9c51f];
+  @apply btn bg-accent text-ink hover:bg-accent-hover border border-[#e85d10];
 }
 
 @utility btn-dark {
@@ -102,4 +103,4 @@
 }
 
 .maplibregl-ctrl-attrib { font-size: 10px; }
-.maplibregl-canvas:focus-visible { outline: 3px solid #cdeb3f; outline-offset: -3px; }
+.maplibregl-canvas:focus-visible { outline: 3px solid #ff6b1a; outline-offset: -3px; }

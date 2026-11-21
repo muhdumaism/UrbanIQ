@@ -65,7 +65,7 @@ export function LocationPicker({
     }
     if (!markerRef.current) {
       const el = document.createElement("div");
-      el.innerHTML = `<svg width="34" height="44" viewBox="0 0 34 44" aria-hidden="true"><path d="M17 43C17 43 32 27 32 16A15 15 0 1 0 2 16C2 27 17 43 17 43Z" fill="#cdeb3f" stroke="#0d1013" stroke-width="2.5"/><circle cx="17" cy="16" r="5.5" fill="#0d1013"/></svg>`;
+      el.innerHTML = `<svg width="34" height="44" viewBox="0 0 34 44" aria-hidden="true"><path d="M17 43C17 43 32 27 32 16A15 15 0 1 0 2 16C2 27 17 43 17 43Z" fill="#ff6b1a" stroke="#0d1013" stroke-width="2.5"/><circle cx="17" cy="16" r="5.5" fill="#0d1013"/></svg>`;
       el.setAttribute("aria-label", "Report location pin (drag to adjust)");
       markerRef.current = new maplibregl.Marker({ element: el, draggable: true, anchor: "bottom" }).setLngLat([value.lng, value.lat]).addTo(map);
       markerRef.current.on("dragend", () => {
@@ -145,7 +145,7 @@ export function LocationPicker({
       </div>
 
       {value.lat != null && value.lng != null && (
-        <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${value.confirmed ? "border-[#b9d36a] bg-accent-soft" : "border-line-strong bg-surface"}`}>
+        <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 ${value.confirmed ? "border-[#ffb98f] bg-accent-soft" : "border-line-strong bg-surface"}`}>
           <p className="text-sm">
             {ward ? (
               <>

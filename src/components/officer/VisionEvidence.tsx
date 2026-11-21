@@ -52,7 +52,7 @@ export function PhotoWithDetections({ src, alt, vision }: { src: string; alt: st
 export function VisionSummary({ vision }: { vision: VisionEvidence | null }) {
   if (!vision || vision.status === "no_photo") return null;
   const tone =
-    vision.status === "detected" ? "border-[#b9d36a] bg-accent-soft" : vision.status === "inconclusive" ? "border-line bg-paper" : "border-[#ecd894] bg-med-soft";
+    vision.status === "detected" ? "border-[#ffb98f] bg-accent-soft" : vision.status === "inconclusive" ? "border-line bg-paper" : "border-[#ecd894] bg-med-soft";
   return (
     <section aria-label="Photo detector evidence (advisory)" className={`rounded-lg border p-3 text-sm ${tone}`}>
       <p className="flex flex-wrap items-center gap-2">

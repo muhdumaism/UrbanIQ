@@ -149,17 +149,18 @@ The password for all three is **`civicflow-demo`**. Demo accounts only work in d
 ## 🔌 Live integrations
 
 <details>
-<summary><b>🤖 Claude triage (live mode)</b></summary>
+<summary><b>🤖 Claude triage (optional)</b></summary>
 
 ```env
-CIVICFLOW_MODE="live"
+CIVICFLOW_MODE="production"
 ANTHROPIC_API_KEY="sk-ant-..."
 AI_MODEL="claude-opus-5-5"
 AI_EFFORT="low"
 ```
 
 Text and photo are sent with a frozen system prompt. The model returns structured output, which the server validates with Zod.
-Missing credentials, refusals, malformed output and timeouts never lose a report. The report is kept, retried with
+Without a key, the built-in rule-based classifier is used instead (no AI calls, no warnings).
+Refusals, malformed output and timeouts never lose a report. The report is kept, retried with
 backoff, and finally filed for review with a keyword-based provisional classification.
 </details>
 
@@ -222,8 +223,8 @@ UrbanIQ ships a production [`Dockerfile`](Dockerfile) and a [`docker-compose.dok
    POSTGRES_PASSWORD=change-me
    APP_SECRET=<openssl rand -hex 32>
    APP_BASE_URL=https://urbaniq.example.gov
-   CIVICFLOW_MODE=demo            # or live (+ ANTHROPIC_API_KEY)
-   SEED_DEMO_DATA=true            # first deploy only, then set back to false (it resets data!)
+   CIVICFLOW_MODE=production      # or demo (demo logins + labels)
+   SEED_DEMO_DATA=false           # true loads the fictional sample city (it resets data!)
    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=   # optional, build-time
    NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID=    # optional, build-time
    ```
@@ -237,9 +238,12 @@ UrbanIQ ships a production [`Dockerfile`](Dockerfile) and a [`docker-compose.dok
 3. Mount a volume at `/app/storage` (private photo uploads), or set `STORAGE_DRIVER=s3` and the `S3_*` variables.
 4. Add a domain on port 3000.
 
-**Going live (real officers instead of demo accounts)**
+**Production (real officer accounts, AI optional)**
 
-Set `CIVICFLOW_MODE=live` and `SEED_DEMO_DATA=false`, then open the app container's terminal in Dokploy and run:
+No AI key is needed. Without `ANTHROPIC_API_KEY`, reports are triaged by the built-in rule-based classifier; add a key at any time and Claude takes over automatically (`AI_PROVIDER=rules` keeps AI off even with a key).
+On start, production mode removes the demo officer accounts and any seeded sample tickets (real citizen reports are never touched).
+
+Set `CIVICFLOW_MODE=production`, redeploy, then open the app container's terminal in Dokploy and run:
 
 ```bash
 /app/docker/entrypoint.sh create-officer --email ana@city.gov --name "Ana Diaz" --role SUPERVISOR --password 'a-long-password'

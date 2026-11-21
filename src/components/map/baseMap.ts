@@ -25,7 +25,7 @@ export function cityStyle(): StyleSpecification {
       { id: "river", type: "line", source: "basemap", filter: ["==", ["get", "kind"], "river"], paint: { "line-color": "#173149", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6, 16, 28] }, layout: { "line-cap": "round" } },
       { id: "minor", type: "line", source: "basemap", filter: ["==", ["get", "kind"], "minor"], paint: { "line-color": "#29323b", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 1.5, 16, 8] }, layout: { "line-cap": "round" } },
       { id: "major", type: "line", source: "basemap", filter: ["==", ["get", "kind"], "major"], paint: { "line-color": "#3a4651", "line-width": ["interpolate", ["linear"], ["zoom"], 12, 2.5, 16, 12] }, layout: { "line-cap": "round" } },
-      { id: "ward-fill", type: "fill", source: "wards", paint: { "fill-color": "#cdeb3f", "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.07, 0] } },
+      { id: "ward-fill", type: "fill", source: "wards", paint: { "fill-color": "#ff6b1a", "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.07, 0] } },
       { id: "ward-line", type: "line", source: "wards", paint: { "line-color": "#5d6b78", "line-width": 1.4, "line-dasharray": [3, 2] } },
     ],
   };

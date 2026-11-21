@@ -126,5 +126,5 @@ export function setInitialView(map: google.maps.Map, w: WardsPayload, points: go
 
 export function styleWards(map: google.maps.Map, fc: GeoJSON.FeatureCollection) {
   map.data.addGeoJson(fc);
-  map.data.setStyle({ strokeColor: "#9aa7b4", strokeWeight: 1.5, strokeOpacity: 0.9, fillColor: "#cdeb3f", fillOpacity: 0.04, clickable: false });
+  map.data.setStyle({ strokeColor: "#9aa7b4", strokeWeight: 1.5, strokeOpacity: 0.9, fillColor: "#ff6b1a", fillOpacity: 0.04, clickable: false });
 }

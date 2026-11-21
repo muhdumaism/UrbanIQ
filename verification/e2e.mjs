@@ -42,7 +42,8 @@ async function submitReport(page, { text, sample, pin, landmark, shot }) {
   await page.evaluate(() => localStorage.clear());
   await page.reload();
   if (text) await page.getByLabel("Describe the issue").fill(text);
-  if (sample) await page.getByRole("button", { name: sample }).click();
+  const SAMPLE_FILES = { "Flooded pothole": "flooded-pothole.jpg", "Hanging wire": "sparking-wire.jpg", "Overflowing bin": "overflowing-bin.jpg", "Fallen tree": "fallen-tree.jpg" };
+  if (sample) await page.locator("#photo-input").setInputFiles(path.resolve("public/samples", SAMPLE_FILES[sample]));
   if (sample) await page.getByAltText("Preview of the photo you selected").waitFor();
   if (pin) await pinAt(page, pin.lat, pin.lng);
   if (landmark) await page.locator("#loc-text").fill(landmark);

@@ -4,7 +4,7 @@
  */
 import { Prisma, type Report } from "@prisma/client";
 import { prisma } from "./db";
-import { env, isDemoMode, liveAiConfigured } from "./env";
+import { env, triageEngine } from "./env";
 import { storage } from "./storage";
 import { DemoTriageProvider, demoTriage } from "./ai/demo";
 import { AnthropicTriageProvider } from "./ai/anthropic";
@@ -21,9 +21,10 @@ type Tx = Prisma.TransactionClient;
 const MATCH_LOCK_KEY = 4242001;
 
 export function getProvider(): TriageProvider {
-  if (isDemoMode()) return new DemoTriageProvider();
-  if (!liveAiConfigured()) {
-    throw new TriageError("Live AI is not configured (ANTHROPIC_API_KEY is missing). Report kept for manual review.", false, "not_configured");
+  const engine = triageEngine();
+  if (engine === "rules") return new DemoTriageProvider(env().CIVICFLOW_MODE === "demo" ? "demo:keyword-rules" : "rules:keyword");
+  if (engine === "ai_missing_key") {
+    throw new TriageError("AI_PROVIDER=anthropic but ANTHROPIC_API_KEY is missing. Report kept for manual review.", false, "not_configured");
   }
   const e = env();
   return new AnthropicTriageProvider(e.ANTHROPIC_API_KEY!, e.AI_MODEL, e.AI_EFFORT, e.AI_TIMEOUT_MS);

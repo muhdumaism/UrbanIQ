@@ -48,7 +48,7 @@ const STREETS = (basemap as { features: { properties: { name?: string } }[] }).f
   .filter((n): n is string => Boolean(n));
 
 export class DemoTriageProvider implements TriageProvider {
-  readonly name = "demo:keyword-rules";
+  constructor(readonly name = "demo:keyword-rules") {}
 
   async triage(input: TriageInput): Promise<TriageOutput> {
     return { result: demoTriage(input), provider: this.name };

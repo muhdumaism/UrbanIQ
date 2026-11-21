@@ -142,7 +142,7 @@ export function Workspace({ officer, departments, wards, mode }: { officer: Sess
           </button>
         </div>
         <div className="flex h-10 items-center gap-3 rounded-xl bg-white pl-3 pr-1.5 shadow-lg">
-          {mode.demo ? <span className="text-[12px] text-muted">Demo</span> : !mode.liveAi ? <span className="text-[12px] text-high">AI not configured</span> : null}
+          {mode.demo ? <span className="text-[12px] text-muted">Demo</span> : !mode.liveAi ? <span className="text-[12px] text-high">AI key missing</span> : null}
           <span className="text-[13px]">{officer.name}</span>
           <button type="button" onClick={signOut} className="rounded-lg px-2.5 py-1.5 text-[13px] text-ink-2 hover:bg-paper">
             Sign out

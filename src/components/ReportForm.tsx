@@ -8,18 +8,12 @@ import { LocationField as LocationPicker } from "./map/LocationField";
 const DRAFT_KEY = "civicflow:report-draft:v1";
 const MAX_BYTES = 10 * 1024 * 1024;
 const TYPES = ["image/jpeg", "image/png", "image/webp"];
-const SAMPLES = [
-  { file: "/samples/flooded-pothole.jpg", label: "Flooded pothole" },
-  { file: "/samples/sparking-wire.jpg", label: "Hanging wire" },
-  { file: "/samples/overflowing-bin.jpg", label: "Overflowing bin" },
-  { file: "/samples/fallen-tree.jpg", label: "Fallen tree" },
-];
 
 type Errors = Partial<Record<"text" | "photo" | "location" | "form", string>>;
 
 const newKey = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`);
 
-export function ReportForm({ demo }: { demo: boolean }) {
+export function ReportForm() {
   const router = useRouter();
   const [text, setText] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -73,11 +67,6 @@ export function ReportForm({ demo }: { demo: boolean }) {
     setPhoto(null);
     setPreview(null);
     if (fileRef.current) fileRef.current.value = "";
-  };
-  const loadSample = async (src: string) => {
-    const res = await fetch(src);
-    const blob = await res.blob();
-    choosePhoto(new File([blob], src.split("/").pop()!, { type: "image/jpeg" }));
   };
 
   const validate = (): Errors => {
@@ -255,18 +244,6 @@ export function ReportForm({ demo }: { demo: boolean }) {
           <p id="photo-error" className="mt-1.5 text-sm text-crit">
             {errors.photo}
           </p>
-        )}
-        {demo && !preview && (
-          <div className="mt-3">
-            <p className="text-sm text-muted">Demo: try an illustrative sample photo</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {SAMPLES.map((s) => (
-                <button key={s.file} type="button" className="btn-outline btn-sm" onClick={() => loadSample(s.file)}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
         )}
       </section>
 

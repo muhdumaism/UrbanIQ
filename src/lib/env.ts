@@ -2,10 +2,12 @@ import { z } from "zod";
 
 const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
-  CIVICFLOW_MODE: z.enum(["demo", "live"]).default("demo"),
+  /** demo = demo logins + labels · production (alias: live) = real officer accounts only */
+  CIVICFLOW_MODE: z.enum(["demo", "live", "production"]).default("demo"),
   APP_SECRET: z.string().min(32, "APP_SECRET must be at least 32 characters"),
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
-  AI_PROVIDER: z.enum(["anthropic"]).default("anthropic"),
+  /** auto/anthropic = Claude when ANTHROPIC_API_KEY is set, otherwise built-in rules · rules = never call AI */
+  AI_PROVIDER: z.enum(["auto", "rules", "anthropic"]).default("auto"),
   ANTHROPIC_API_KEY: z.string().optional(),
   AI_MODEL: z.string().default("claude-opus-5-5"),
   AI_EFFORT: z.enum(["low", "medium", "high"]).default("low"),
@@ -56,3 +58,10 @@ export const isDemoMode = () => env().CIVICFLOW_MODE === "demo";
 
 /** True when live AI can actually be called. */
 export const liveAiConfigured = () => Boolean(env().ANTHROPIC_API_KEY && env().ANTHROPIC_API_KEY!.trim().length > 0);
+
+/** Which triage engine runs: Claude, or the built-in rule-based classifier. */
+export function triageEngine(): "ai" | "rules" | "ai_missing_key" {
+  const e = env();
+  if (e.CIVICFLOW_MODE === "demo" || e.AI_PROVIDER === "rules") return "rules";
+  return liveAiConfigured() ? "ai" : "rules";
+}

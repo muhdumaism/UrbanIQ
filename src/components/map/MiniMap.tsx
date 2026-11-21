@@ -21,6 +21,6 @@ export function MiniMap({ lat, lng, label, className = "h-40 w-full" }: { lat: n
       live = false;
     };
   }, [lat, lng, failed]);
-  if (failed) return <StaticCityMap className={className} pins={[{ lat, lng, ring: true, color: "#cdeb3f" }]} focus={{ lat, lng, zoom: 3 }} label={label} />;
+  if (failed) return <StaticCityMap className={className} pins={[{ lat, lng, ring: true, color: "#ff6b1a" }]} focus={{ lat, lng, zoom: 3 }} label={label} />;
   return <div ref={box} className={className} role="img" aria-label={label} />;
 }

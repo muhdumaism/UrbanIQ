@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { LogoMark } from "../Logo";
+import { LogoMark, Wordmark } from "../Logo";
 import type { SessionOfficer } from "@/lib/auth";
 import type { ModeInfo } from "@/lib/mode";
 
@@ -14,15 +14,15 @@ export function OfficerTopBar({ officer, mode }: { officer: SessionOfficer; mode
       <div className="flex min-w-0 items-center gap-3">
         <Link href="/officer" className="flex items-center gap-2 font-semibold tracking-tight">
           <LogoMark className="h-6 w-6" />
-          <span className="hidden sm:inline">UrbanIQ</span>
+          <Wordmark className="hidden text-[16px] sm:inline" />
           <span className="hidden text-muted sm:inline">/ Operations</span>
         </Link>
         {mode.demo ? (
-          <span className="chip border-[#a9c51f] bg-accent text-ink" title="Sample data, deterministic local triage">
-            Demo mode · sample data
+          <span className="chip border-[#e85d10] bg-accent text-ink" title="Rule-based triage, no live AI">
+            Demo mode
           </span>
         ) : !mode.liveAi ? (
-          <span className="chip border-[#f1c9a5] bg-high-soft text-high">Live AI not configured</span>
+          <span className="chip border-[#f1c9a5] bg-high-soft text-high">Live AI key missing</span>
         ) : null}
       </div>
       <div className="flex items-center gap-3 text-sm">

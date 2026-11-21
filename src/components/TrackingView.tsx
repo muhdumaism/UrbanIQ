@@ -60,7 +60,7 @@ export function TrackingView({ initial, token, link, isNew }: { initial: View; t
   return (
     <div className="space-y-6">
       {isNew && (
-        <div className="rounded-2xl border border-[#b9d36a] bg-accent-soft p-5" role="status">
+        <div className="rounded-2xl border border-[#ffb98f] bg-accent-soft p-5" role="status">
           <p className="text-sm font-medium text-accent-ink">Report received — thank you.</p>
           <p className="mt-1 text-ink-2">Save this private link to check progress. Anyone with the link can see this report&apos;s status, so share it carefully.</p>
         </div>
