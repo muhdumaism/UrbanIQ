@@ -10,6 +10,11 @@ services:
         NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY:-}
         NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID: ${NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID:-}
     restart: unless-stopped
+    # Dokploy writes the Environment tab to .env next to this file: pass every variable through.
+    # (Values under `environment:` below take precedence.)
+    env_file:
+      - path: .env
+        required: false
     depends_on:
       db:
         condition: service_healthy
