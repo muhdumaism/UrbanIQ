@@ -64,7 +64,8 @@ The service refuses to serve when:
 | Variable | Default | |
 | --- | --- | --- |
 | `MODEL_PATH` | `/models/civic_guardian.pt` | Mounted read-only; never baked into the image |
-| `EXPECTED_SHA256` | — | Pin the verified checkpoint (recommended) |
+| `EXPECTED_SHA256` | — | Pin the verified checkpoint (required with `MODEL_URL`) |
+| `MODEL_URL` | — | Optional: download the weights on first start if `MODEL_PATH` is missing. The file is verified against `EXPECTED_SHA256` before use. Mount a **volume** at `/models` so it is downloaded only once |
 | `VISION_TOKEN` | — (required) | Shared secret with the UrbanIQ app |
 | `CLASS_MAP_JSON` | see table | e.g. `{"pothole":"pothole",...}` |
 | `PREFILTER_CONF` | `0.10` | Raw detector cut-off; the app applies `VISION_MIN_CONFIDENCE` (0.5) for classification |
@@ -84,7 +85,10 @@ Put the weights in `vision/models/civic_guardian.pt` only after permission is cl
 1. Create an **Application** from this repository with build type **Dockerfile** and build path `vision/`.
 2. **Do not add a domain.** Leave the service on the internal Docker network only. Dokploy services in the same project reach it by its
    app name, e.g. `http://urbaniq-vision:8000`.
-3. Under **Advanced → Volumes**, add a file or volume mount at `/models`, read-only, containing `civic_guardian.pt` (after clearance).
+3. Provide the weights (after clearance) in one of two ways:
+   - **No server access needed:** set `MODEL_URL` (e.g. the GitHub raw URL of `civic_guardian.pt`), and add a **Volume Mount** named `urbaniq-models` at `/models` so the download persists.
+   - **Bind Mount:** copy the file to the server (e.g. `/opt/urbaniq/models/civic_guardian.pt`) and bind-mount that folder at `/models`.
+   Dokploy's *File Mount* only takes pasted text, so it can't hold the binary `.pt` file.
 4. Environment: `VISION_TOKEN`, `EXPECTED_SHA256=11a5db9c…75ea81`, optionally `MAX_CONCURRENCY=1`.
 5. Resources: about 1–2 vCPU and 2 GB RAM. YOLO11n on CPU takes roughly 100–400 ms per image.
 6. On the UrbanIQ app, set `VISION_URL=http://urbaniq-vision:8000` and the same `VISION_TOKEN`.

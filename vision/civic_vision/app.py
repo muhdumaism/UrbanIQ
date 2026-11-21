@@ -25,6 +25,8 @@ log = logging.getLogger("civic_vision")
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
 
 MODEL_PATH = os.environ.get("MODEL_PATH", "/models/civic_guardian.pt")
+# Optional: download the weights on first start (e.g. a GitHub raw URL). Requires EXPECTED_SHA256.
+MODEL_URL = os.environ.get("MODEL_URL", "").strip()
 EXPECTED_SHA256 = os.environ.get("EXPECTED_SHA256", "").strip().lower()
 TOKEN = os.environ.get("VISION_TOKEN", "")
 PREFILTER_CONF = float(os.environ.get("PREFILTER_CONF", "0.10"))
@@ -51,6 +53,11 @@ _sem = asyncio.Semaphore(MAX_CONCURRENCY)
 def load_model(factory=None) -> None:
     """Load and verify the checkpoint. `factory` is injectable for tests (defaults to ultralytics.YOLO)."""
     try:
+        if not os.path.isfile(MODEL_PATH) and MODEL_URL:
+            if not EXPECTED_SHA256:
+                state.status, state.detail = "error", "MODEL_URL is set but EXPECTED_SHA256 is not; refusing to download unverified weights."
+                return
+            _download(MODEL_URL, MODEL_PATH)
         if not os.path.isfile(MODEL_PATH):
             state.status, state.detail = "missing", f"No checkpoint at MODEL_PATH ({MODEL_PATH})."
             return
@@ -73,6 +80,35 @@ def load_model(factory=None) -> None:
     except Exception as e:  # noqa: BLE001 - surface a safe status instead of crashing
         log.exception("model load failed")
         state.status, state.detail = "error", f"Model failed to load: {type(e).__name__}"
+
+
+def _download(url: str, dest: str) -> None:
+    """Download to a temp file, verify sha256, then move into place (never leaves a bad file behind)."""
+    import hashlib
+    import shutil
+    import tempfile
+    import urllib.request
+
+    os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+    log.info("downloading model weights from %s", url)
+    h = hashlib.sha256()
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(dest) or ".", suffix=".part")
+    try:
+        with urllib.request.urlopen(url, timeout=120) as r, os.fdopen(fd, "wb") as f:
+            size = 0
+            while chunk := r.read(1 << 20):
+                size += len(chunk)
+                if size > 500 * 1024 * 1024:
+                    raise ValueError("download too large")
+                h.update(chunk)
+                f.write(chunk)
+        if h.hexdigest() != EXPECTED_SHA256:
+            raise ValueError("downloaded weights do not match EXPECTED_SHA256")
+        shutil.move(tmp, dest)
+        log.info("model weights downloaded and verified")
+    finally:
+        if os.path.exists(tmp):
+            os.remove(tmp)
 
 
 @app.on_event("startup")

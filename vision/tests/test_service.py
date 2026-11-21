@@ -111,3 +111,37 @@ def test_rejects_non_images(service):
     mod.load_model(factory=FakeModel)
     r = client.post("/v1/detect", files={"image": ("x.jpg", b"not an image", "image/jpeg")}, headers=AUTH)
     assert r.status_code == 415
+
+
+def test_downloads_and_verifies_weights(service, tmp_path, monkeypatch):
+    import hashlib
+    mod, _ = service
+    src = tmp_path / "remote.pt"
+    src.write_bytes(b"remote-weights")
+    dest = tmp_path / "models" / "civic_guardian.pt"
+    monkeypatch.setattr(mod, "MODEL_PATH", str(dest))
+    monkeypatch.setattr(mod, "MODEL_URL", src.as_uri())
+    monkeypatch.setattr(mod, "EXPECTED_SHA256", hashlib.sha256(b"remote-weights").hexdigest())
+    mod.load_model(factory=FakeModel)
+    assert mod.state.status == "ready" and dest.read_bytes() == b"remote-weights"
+
+
+def test_refuses_download_with_wrong_checksum(service, tmp_path, monkeypatch):
+    mod, _ = service
+    src = tmp_path / "remote.pt"
+    src.write_bytes(b"tampered")
+    dest = tmp_path / "models" / "civic_guardian.pt"
+    monkeypatch.setattr(mod, "MODEL_PATH", str(dest))
+    monkeypatch.setattr(mod, "MODEL_URL", src.as_uri())
+    monkeypatch.setattr(mod, "EXPECTED_SHA256", "0" * 64)
+    mod.load_model(factory=FakeModel)
+    assert mod.state.status == "error" and not dest.exists()
+
+
+def test_refuses_download_without_pinned_checksum(service, tmp_path, monkeypatch):
+    mod, _ = service
+    monkeypatch.setattr(mod, "MODEL_PATH", str(tmp_path / "m" / "x.pt"))
+    monkeypatch.setattr(mod, "MODEL_URL", "https://example.invalid/x.pt")
+    monkeypatch.setattr(mod, "EXPECTED_SHA256", "")
+    mod.load_model(factory=FakeModel)
+    assert mod.state.status == "error" and "EXPECTED_SHA256" in mod.state.detail

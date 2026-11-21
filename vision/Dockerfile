@@ -11,7 +11,7 @@ RUN pip install -r /app/requirements.txt && pip uninstall -y opencv-python && pi
 
 WORKDIR /app
 COPY civic_vision /app/civic_vision
-RUN useradd --system --uid 10001 vision && mkdir -p /models /tmp/ultralytics && chown vision /tmp/ultralytics
+RUN useradd --system --uid 10001 vision && mkdir -p /models /tmp/ultralytics && chown vision /models /tmp/ultralytics
 USER vision
 
 EXPOSE 8000
