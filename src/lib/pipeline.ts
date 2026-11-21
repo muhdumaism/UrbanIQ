@@ -13,8 +13,9 @@ import { TriageResultSchema, type TriageResult } from "./ai/schema";
 import { decideSeverity, isHigherSeverity } from "./severity";
 import { resolveRoute } from "./routing";
 import { findMatches, type MatchCandidate } from "./matching";
-import { findLandmark, wardForPoint, wardLabel } from "./geo";
-import { SEVERITY_LABEL, subtypeLabel } from "./taxonomy";
+import { findLandmark, wardForPoint, wardLabel } from "./municipality";
+import { SEVERITY_LABEL, categoryOf, subtypeLabel } from "./taxonomy";
+import { analyzePhoto, parseStoredVision } from "./vision";
 
 type Tx = Prisma.TransactionClient;
 const MATCH_LOCK_KEY = 4242001;
@@ -46,6 +47,11 @@ export async function processReport(reportId: string) {
   await prisma.report.update({ where: { id: reportId }, data: { status: "PROCESSING" } });
   const provider = getProvider();
   const input = await buildInput(report);
+  // Advisory photo analysis (private YOLO service). Never blocks triage: a missing, offline or
+  // inconclusive detector is recorded and triage continues with text + location.
+  const vision = await analyzePhoto(input.photo);
+  await prisma.report.update({ where: { id: reportId }, data: { vision: vision as unknown as Prisma.InputJsonValue, visionStatus: vision.status } });
+  input.vision = vision;
   const { result, provider: name } = await provider.triage(input);
   await fileTriage(reportId, result, name, null);
 }
@@ -60,6 +66,7 @@ export async function fileFailedTriage(reportId: string, error: string) {
   } catch {
     input = { text: report.text, photo: null, locationText: report.locationText, wardName: null };
   }
+  input.vision = parseStoredVision(report.vision);
   const provisional = demoTriage(input);
   await fileTriage(reportId, provisional, "fallback:keyword-rules", error);
 }
@@ -161,9 +168,17 @@ export async function fileTriage(reportId: string, t: TriageResult, provider: st
       const reviewReasons = [...sev.reviewFlags];
       if (failure) reviewReasons.unshift(`AI processing failed: ${failure} Classification below is a keyword fallback.`);
       if (route.status === "uncertain") reviewReasons.push(`Ownership uncertain: ${route.reason}`);
-      if (loc.outsideBoundary) reviewReasons.push("Pin is outside the sample municipal boundary");
-      if (!loc.wardCode) reviewReasons.push("Location too vague to route");
-      else if (!loc.precise) reviewReasons.push(`Approximate location from landmark (${loc.landmark})`);
+      if (loc.outsideBoundary) reviewReasons.push("Confirmed pin is outside the municipal ward boundaries");
+      else if (!loc.wardCode) reviewReasons.push("Location too vague to route");
+      else if (!loc.precise) reviewReasons.push(`Approximate location from landmark (${loc.landmark}) — confirm`);
+      const photoOnly = !report.text && Boolean(report.photoKey);
+      if (photoOnly && (t.subtype === "other" || t.category_confidence === "low")) {
+        reviewReasons.push("Photo-only report with insufficient evidence to classify");
+      }
+      const vision = parseStoredVision(report.vision);
+      if (vision?.status === "detected" && vision.top?.subtype && t.subtype !== "other" && categoryOf(vision.top.subtype) !== t.category) {
+        reviewReasons.push(`Photo detector suggests ${vision.top.label.replace(/_/g, " ")} (${Math.round(vision.top.confidence * 100)}%), which disagrees with the classification — advisory`);
+      }
 
       const reportUpdate = {
         status: failure ? ("FAILED" as const) : ("TRIAGED" as const),
@@ -188,7 +203,7 @@ export async function fileTriage(reportId: string, t: TriageResult, provider: st
           const stillVague = !loc.wardCode;
           const status =
             ticket.status === "NEEDS_REVIEW" || ticket.status === "WAITING_FOR_DETAILS" || ticket.status === "NEW"
-              ? failure || reviewReasons.some((r) => !r.startsWith("Approximate")) || !departmentId
+              ? failure || reviewReasons.some((r) => r !== "Location too vague to route") || !departmentId
                 ? stillVague && sev.severity !== "CRITICAL"
                   ? "WAITING_FOR_DETAILS"
                   : "NEEDS_REVIEW"
@@ -306,12 +321,12 @@ export async function fileTriage(reportId: string, t: TriageResult, provider: st
       }
 
       // ── New ticket
-      const vague = !loc.wardCode;
-      const blocking = reviewReasons.filter((r) => !r.startsWith("Approximate") && r !== "Location too vague to route");
+      const vague = !loc.wardCode && !loc.outsideBoundary;
+      const blocking = reviewReasons.filter((r) => r !== "Location too vague to route");
       let status: "NEW" | "NEEDS_REVIEW" | "WAITING_FOR_DETAILS" = "NEW";
       if (failure || blocking.length || !departmentId) status = "NEEDS_REVIEW";
       if (vague) status = sev.severity === "CRITICAL" || failure ? "NEEDS_REVIEW" : "WAITING_FOR_DETAILS";
-      const urgent = (sev.severity === "CRITICAL" && (vague || !departmentId)) || sev.urgent;
+      const urgent = (sev.severity === "CRITICAL" && (!loc.wardCode || !departmentId)) || sev.urgent;
 
       const reference = await nextTicketReference(tx);
       const ticket = await tx.ticket.create({

@@ -1,0 +1,7 @@
+# Runtime (CPU). torch/torchvision are installed from the CPU wheel index in the Dockerfile.
+# ultralytics is pinned to the version recorded in the checkpoint metadata (8.4.139).
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+python-multipart==0.0.20
+pillow==12.3.0
+ultralytics==8.4.139

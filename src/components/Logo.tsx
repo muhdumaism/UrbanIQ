@@ -15,7 +15,7 @@ export function Logo({ href = "/", dark = false }: { href?: string; dark?: boole
   return (
     <Link href={href} className={`inline-flex items-center gap-2.5 font-semibold tracking-tight text-[17px] ${dark ? "text-white" : "text-ink"}`}>
       <LogoMark />
-      CivicFlow
+      UrbanIQ
     </Link>
   );
 }

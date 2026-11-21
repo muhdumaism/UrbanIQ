@@ -1,13 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
-import { EMPTY_LOCATION, type PickedLocation } from "./map/LocationPicker";
+import { EMPTY_LOCATION, type PickedLocation } from "./map/location-types";
+import { LocationField as LocationPicker } from "./map/LocationField";
 
-const LocationPicker = dynamic(() => import("./map/LocationPicker").then((m) => m.LocationPicker), {
-  ssr: false,
-  loading: () => <div className="h-64 animate-pulse rounded-2xl bg-night sm:h-80" aria-label="Loading map" />,
-});
 
 const DRAFT_KEY = "civicflow:report-draft:v1";
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -114,6 +110,7 @@ export function ReportForm({ demo }: { demo: boolean }) {
     if (location.lat != null && location.lng != null) {
       fd.set("lat", String(location.lat));
       fd.set("lng", String(location.lng));
+      if (location.placeId) fd.set("placeId", location.placeId);
     }
     // Network retries reuse the same idempotency key, so a retry can never create a second report.
     let lastErr = "";

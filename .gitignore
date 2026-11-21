@@ -11,3 +11,9 @@ storage/
 verification/screenshots/
 *.log
 .DS_Store
+
+# YOLO weights are mounted at runtime; never commit them (reuse permission unverified).
+vision/models/
+*.pt
+__pycache__/
+.pytest_cache/

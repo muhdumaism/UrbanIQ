@@ -164,12 +164,19 @@ model Report {
   locationText      String?
   locationSource    LocationSource @default(NONE)
   locationConfirmed Boolean        @default(false)
+  /// Google Place ID the citizen picked in search (IDs may be stored indefinitely under Google's terms;
+  /// Google-provided names/addresses are NOT persisted — they are fetched live for display).
+  locationPlaceId   String?
   wardCode          String?
   status            ReportStatus   @default(RECEIVED)
   /// Validated AI extraction (TriageResult) — evidence only, never authority.
   triage            Json?
   triageProvider    String?
   triageError       String?
+  /// Advisory object-detector output (VisionResult). Evidence for officers only.
+  vision            Json?
+  /// not_configured | unavailable | error | no_photo | inconclusive | detected
+  visionStatus      String?
   /// Severity the backend computed from this report's own evidence.
   severity          Severity?
   severityReason    String?

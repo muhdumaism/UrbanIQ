@@ -5,15 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import { addWardLabels, createCityMap, webglAvailable } from "./baseMap";
 import { findLandmark, inCityBounds, LANDMARKS, wardForPoint, wardLabel } from "@/lib/geo";
 
-export type PickedLocation = {
-  lat: number | null;
-  lng: number | null;
-  source: "DEVICE" | "PIN" | "LANDMARK" | "NONE";
-  text: string;
-  confirmed: boolean;
-};
-
-export const EMPTY_LOCATION: PickedLocation = { lat: null, lng: null, source: "NONE", text: "", confirmed: false };
+import type { PickedLocation } from "./location-types";
+export type { PickedLocation } from "./location-types";
 
 export function LocationPicker({
   value,
@@ -102,9 +95,13 @@ export function LocationPicker({
         setPin(latitude, longitude, "DEVICE");
         mapRef.current?.flyTo({ center: [longitude, latitude], zoom: 15 });
       },
-      () => {
+      (err) => {
         setGeoState("error");
-        setGeoMsg("We couldn't get your location. Drop a pin on the map or type a landmark instead.");
+        setGeoMsg(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission was denied. Drop a pin on the map or type a landmark instead."
+            : "We couldn't get your location. Drop a pin on the map or type a landmark instead.",
+        );
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
@@ -156,13 +153,13 @@ export function LocationPicker({
                 {value.source === "DEVICE" ? " (from your device)" : ""}.
               </>
             ) : (
-              <>Pin is outside the sample ward boundaries. Move it inside Port Alder.</>
+              <>This pin is outside the sample wards. You can still send it — an officer will review the location.</>
             )}
           </p>
           {value.confirmed ? (
             <span className="text-sm font-medium text-accent-ink">✓ Location confirmed</span>
           ) : (
-            <button type="button" className="btn-dark btn-sm" disabled={!ward} onClick={() => onChange({ ...value, confirmed: true })}>
+            <button type="button" className="btn-dark btn-sm" onClick={() => onChange({ ...value, confirmed: true })}>
               Confirm this location
             </button>
           )}

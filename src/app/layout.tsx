@@ -4,8 +4,8 @@ import { GeistMono } from "geist/font/mono";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "CivicFlow — Report a local issue", template: "%s · CivicFlow" },
-  description: "Report potholes, broken lights, waste and hazards. CivicFlow routes your report to the right team and keeps you posted.",
+  title: { default: "UrbanIQ — Report a local issue", template: "%s · UrbanIQ" },
+  description: "Report potholes, broken lights, waste and hazards. UrbanIQ routes your report to the right team and keeps you posted.",
   robots: { index: false },
 };
 

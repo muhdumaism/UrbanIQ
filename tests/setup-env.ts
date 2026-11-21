@@ -3,3 +3,6 @@ process.env.APP_SECRET = "test-secret-test-secret-test-secret-1234";
 process.env.CIVICFLOW_MODE = "demo";
 process.env.LOCAL_STORAGE_DIR = "./storage/test-uploads";
 process.env.RUN_INLINE_WORKER = "false";
+process.env.VISION_URL = "http://vision.test";
+process.env.VISION_TOKEN = "test-vision-token";
+process.env.VISION_MIN_CONFIDENCE = "0.5";

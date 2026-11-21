@@ -123,7 +123,7 @@ export default function Home() {
 
       <footer className="border-t border-line">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-8 text-sm text-muted sm:flex-row sm:justify-between sm:px-6">
-          <span>CivicFlow — hackathon prototype. Port Alder is fictional; all content is sample data.</span>
+          <span>UrbanIQ — hackathon prototype. Port Alder is fictional; all content is sample data.</span>
           <span>In an emergency, call your local emergency number first.</span>
         </div>
       </footer>

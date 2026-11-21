@@ -61,7 +61,10 @@ export function demoTriage(input: TriageInput): TriageResult {
   const sample = input.photo?.fingerprint ? SAMPLES.find((s) => s.sha256 === input.photo!.fingerprint) : undefined;
 
   const textSubtype = raw ? SUBTYPE_RULES.find((r) => r.re.test(t))?.subtype : undefined;
-  const subtype: Subtype = textSubtype ?? sample?.subtype ?? "other";
+  // Advisory detector hint (only used when nothing better is known).
+  const det = input.vision?.status === "detected" ? input.vision.top : null;
+  const subtype: Subtype = textSubtype ?? sample?.subtype ?? det?.subtype ?? "other";
+  const detCategoryConflict = Boolean(det?.subtype && textSubtype && categoryOf(det.subtype) !== categoryOf(textSubtype));
   const conflicts: string[] = [];
   if (textSubtype && sample && categoryOf(textSubtype) !== categoryOf(sample.subtype)) {
     conflicts.push(
@@ -115,9 +118,14 @@ export function demoTriage(input: TriageInput): TriageResult {
   if (sample) {
     photoObs.push(...sample.observations);
     for (const f of sample.factors) add(f.factor, "photo", f.detail);
+  } else if (input.photo && det) {
+    photoObs.push(`Object detector (advisory): ${det.label.replace(/_/g, " ")}, ${Math.round(det.confidence * 100)}% confidence.`);
   } else if (input.photo) {
     photoObs.push("Photo attached. The demo adapter cannot inspect custom images — an officer should review the photo.");
     if (!raw) missing.push("What the issue is (photo could not be analysed in demo mode)");
+  }
+  if (detCategoryConflict) {
+    conflicts.push(`Text describes ${subtypeLabel(textSubtype!).toLowerCase()}, but the photo detector suggests ${det!.label.replace(/_/g, " ")} (${Math.round(det!.confidence * 100)}%).`);
   }
 
   // ── location
@@ -140,12 +148,13 @@ export function demoTriage(input: TriageInput): TriageResult {
   if (subtype === "other") missing.push("What kind of issue this is");
 
   const suggested = suggestSeverity(factors);
+  // A detector label alone (no text, no recognised photo) is medium confidence at best.
   const confidence = subtype === "other" ? "low" : conflicts.length ? "medium" : textSubtype ? "high" : "medium";
   const where = lm?.name ?? clues[0] ?? null;
 
   const result: TriageResult = {
     title: buildTitle(subtype, where, vulnerable),
-    summary: buildSummary(subtype, raw, sample, where),
+    summary: buildSummary(subtype, raw, sample, where, det),
     category: categoryOf(subtype),
     subtype,
     category_confidence: confidence,
@@ -179,11 +188,12 @@ function buildTitle(subtype: Subtype, where: string | null, vulnerable?: string)
   return base;
 }
 
-function buildSummary(subtype: Subtype, raw: string, sample: SamplePhoto | undefined, where: string | null) {
+function buildSummary(subtype: Subtype, raw: string, sample: SamplePhoto | undefined, where: string | null, det?: { label: string; confidence: number } | null) {
   const parts: string[] = [];
   if (raw) parts.push(`Citizen reports: "${raw.length > 220 ? raw.slice(0, 217) + "…" : raw}"`);
   if (sample) parts.push(`Photo shows: ${sample.observations[0].replace(/\.$/, "")}.`);
-  if (!raw && !sample) parts.push("Photo-only report; content not analysed by the demo adapter.");
+  if (!sample && det) parts.push(`Photo detector (advisory) suggests ${det.label.replace(/_/g, " ")} (${Math.round(det.confidence * 100)}%); no description given.`);
+  else if (!raw && !sample) parts.push("Photo-only report; content not analysed by the demo adapter.");
   parts.push(where ? `Location clue: ${where}.` : "No usable location clue.");
   if (subtype === "other") parts.push("Category unclear.");
   return parts.join(" ");

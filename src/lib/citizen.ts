@@ -6,7 +6,7 @@ import { TriageResultSchema } from "./ai/schema";
 import { resolveLocation, loadCandidates, matchConfig } from "./pipeline";
 import { resolveRoute } from "./routing";
 import { findMatches } from "./matching";
-import { inCityBounds, wardLabel } from "./geo";
+import { wardLabel } from "./municipality";
 import { CATEGORY_LABEL, PUBLIC_STATUS_LABEL, subtypeLabel, type CategoryCode, type TicketStatusCode } from "./taxonomy";
 
 export async function findReportByToken(token: string) {
@@ -82,6 +82,7 @@ export const CitizenUpdateSchema = z
         lng: z.number().min(-180).max(180).optional(),
         text: z.string().trim().max(200).optional(),
         source: z.enum(["PIN", "DEVICE", "LANDMARK"]).default("PIN"),
+        placeId: z.string().regex(/^[A-Za-z0-9_-]{10,300}$/).optional(),
       })
       .optional(),
   })
@@ -95,9 +96,6 @@ export class CitizenUpdateError extends Error {}
 export async function applyCitizenUpdate(token: string, input: z.infer<typeof CitizenUpdateSchema>) {
   const report = await findReportByToken(token);
   if (!report) return { ok: false as const, status: 404 };
-  if (input.location?.lat != null && input.location.lng != null && !inCityBounds(input.location.lat, input.location.lng)) {
-    throw new CitizenUpdateError("That point is outside Port Alder. Drop the pin inside the city.");
-  }
   const [rules, departments] = await Promise.all([prisma.routingRule.findMany(), prisma.department.findMany()]);
 
   await prisma.$transaction(async (tx) => {
@@ -119,7 +117,7 @@ export async function applyCitizenUpdate(token: string, input: z.infer<typeof Ci
       updated = await tx.report.update({
         where: { id: r.id },
         data: hasPoint
-          ? { lat: loc.lat, lng: loc.lng, locationConfirmed: true, locationSource: loc.source === "DEVICE" ? "DEVICE" : "PIN", locationText: loc.text || r.locationText }
+          ? { lat: loc.lat, lng: loc.lng, locationConfirmed: true, locationSource: loc.source === "DEVICE" ? "DEVICE" : "PIN", locationText: loc.text || r.locationText, locationPlaceId: loc.placeId ?? null }
           : { locationText: loc.text, locationSource: r.locationConfirmed ? r.locationSource : "LANDMARK" },
         include: { ticket: true },
       });
@@ -167,7 +165,7 @@ export async function applyCitizenUpdate(token: string, input: z.infer<typeof Ci
       Object.assign(data, { lat: newLoc.lat, lng: newLoc.lng, locationPrecise: newLoc.precise, wardCode: newLoc.wardCode, landmark: newLoc.landmark, locationText: newLoc.text });
       await tx.report.update({ where: { id: r.id }, data: { wardCode: newLoc.wardCode } });
       reviewReasons = reviewReasons.filter((x) => x !== "Location too vague to route" && !x.startsWith("Approximate location") && !x.startsWith("Ownership uncertain"));
-      if (!newLoc.precise) reviewReasons.push(`Approximate location from landmark (${newLoc.landmark})`);
+      if (!newLoc.precise) reviewReasons.push(`Approximate location from landmark (${newLoc.landmark}) — confirm`);
       let departmentId = ticket.departmentId;
       if (!departmentId) {
         const route = resolveRoute(rules, ticket.subtype, newLoc.wardCode);
@@ -183,7 +181,7 @@ export async function applyCitizenUpdate(token: string, input: z.infer<typeof Ci
       // Close any other open location questions for this report.
       await tx.infoRequest.updateMany({ where: { reportId: r.id, kind: "LOCATION", status: "OPEN" }, data: { status: "ANSWERED", answeredAt: new Date(), answer: "Location provided" } });
       if (ticket.status === "WAITING_FOR_DETAILS") {
-        const blocking = reviewReasons.filter((x) => !x.startsWith("Approximate"));
+        const blocking = reviewReasons;
         data.status = departmentId && !blocking.length ? "NEW" : "NEEDS_REVIEW";
       }
       data.urgentReview = ticket.severity === "CRITICAL" ? !departmentId : ticket.urgentReview && !departmentId;

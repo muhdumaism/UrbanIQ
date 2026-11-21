@@ -1,24 +1,19 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { MapPane } from "./MapPane";
 import type { SessionOfficer } from "@/lib/auth";
 import type { ModeInfo } from "@/lib/mode";
 import type { QueueRow } from "@/lib/officer";
 import { CATEGORIES, CATEGORY_LABEL, SEVERITIES, SEVERITY_LABEL, STATUS_LABEL, TICKET_STATUSES } from "@/lib/taxonomy";
-import { WARD_LIST } from "@/lib/geo";
 import { OfficerTopBar } from "./OfficerTopBar";
 import { QueueList } from "./QueueList";
 import { TicketPanel } from "./TicketPanel";
 
-const OfficerMap = dynamic(() => import("./OfficerMap").then((m) => m.OfficerMap), {
-  ssr: false,
-  loading: () => <div className="h-full w-full animate-pulse bg-night" />,
-});
 
 type Filters = { view: string; status: string; ward: string; category: string; department: string; severity: string; q: string };
 const DEFAULT_FILTERS: Filters = { view: "open", status: "", ward: "", category: "", department: "", severity: "", q: "" };
 
-export function Workspace({ officer, departments, mode }: { officer: SessionOfficer; departments: { id: string; name: string }[]; mode: ModeInfo }) {
+export function Workspace({ officer, departments, wards, mode }: { officer: SessionOfficer; departments: { id: string; name: string }[]; wards: { code: string; label: string }[]; mode: ModeInfo }) {
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [q, setQ] = useState("");
   const [data, setData] = useState<{ rows: QueueRow[]; processing: number; failed: number } | null>(null);
@@ -87,7 +82,7 @@ export function Workspace({ officer, departments, mode }: { officer: SessionOffi
           <Select label="View" value={filters.view} onChange={(v) => set("view", v)} options={[["open", "Unresolved"], ["all", "All tickets"], ["resolved", "Resolved"]]} />
           <Select label="Severity" value={filters.severity} onChange={(v) => set("severity", v)} options={[["", "Any severity"], ...SEVERITIES.map((s) => [s, SEVERITY_LABEL[s]] as [string, string])]} />
           <Select label="Status" value={filters.status} onChange={(v) => set("status", v)} options={[["", "Any status"], ...TICKET_STATUSES.map((s) => [s, STATUS_LABEL[s]] as [string, string])]} />
-          <Select label="Ward" value={filters.ward} onChange={(v) => set("ward", v)} options={[["", "Any ward"], ...WARD_LIST.map((w) => [w.code, w.label] as [string, string]), ["none", "No ward / location"]]} />
+          <Select label="Ward" value={filters.ward} onChange={(v) => set("ward", v)} options={[["", "Any ward"], ...wards.map((w) => [w.code, w.label] as [string, string]), ["none", "No ward / location"]]} />
           <Select label="Category" value={filters.category} onChange={(v) => set("category", v)} options={[["", "Any category"], ...CATEGORIES.map((c) => [c, CATEGORY_LABEL[c]] as [string, string])]} />
           <Select label="Department" value={filters.department} onChange={(v) => set("department", v)} options={[["", "Any department"], ["none", "Unassigned"], ...departments.map((d) => [d.id, d.name] as [string, string])]} />
           {(activeFilterCount > 0 || q) && (
@@ -122,8 +117,8 @@ export function Workspace({ officer, departments, mode }: { officer: SessionOffi
           />
         </section>
 
-        <section aria-label="Ward map" className={`relative min-h-0 bg-night ${tab === "map" ? "block" : "hidden"} lg:block`}>
-          <OfficerMap rows={rows} selectedId={selected} hoveredId={hovered} onSelect={(id) => setSelected(id)} />
+        <section aria-label="Ward map" className={`relative isolate min-h-0 overflow-hidden bg-night ${tab === "map" ? "block" : "hidden"} lg:block`}>
+          <MapPane rows={rows} selectedId={selected} hoveredId={hovered} onSelect={(id) => setSelected(id)} />
         </section>
 
         {selected && (

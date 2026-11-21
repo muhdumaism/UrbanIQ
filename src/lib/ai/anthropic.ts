@@ -41,6 +41,8 @@ suggested_severity scale (apply the highest that the evidence supports):
 - LOW: localized issue with limited reported impact.
 suggested_severity_reason: one line, specific to this incident (what, where, why it matters), and say "citizen reports" or "photo shows" when the source matters.
 
+An automated object detector may have analysed the photo. Its output is advisory and can be wrong: use it only as a hint, never as a fact on its own, never to raise severity by itself, and record a conflict when it disagrees with the text or with what you can see.
+
 follow_up_question: if there is no street name, landmark, or other place a crew could find, ask ONE short, specific question (e.g. "Which school or nearby landmark is the pothole next to?"). Otherwise null.
 
 Write all text in plain English. Do not invent details.`;
@@ -77,6 +79,13 @@ export class AnthropicTriageProvider implements TriageProvider {
       `<typed_location>${input.locationText?.trim() || "(none)"}</typed_location>`,
       `<ward_from_confirmed_pin>${input.wardName ?? "(no confirmed pin)"}</ward_from_confirmed_pin>`,
       input.photo ? "A photo is attached above." : "No photo was attached.",
+      input.vision && input.vision.status !== "no_photo"
+        ? `<photo_detector_output advisory="true" status="${input.vision.status}">\n${
+            input.vision.detections.length
+              ? input.vision.detections.slice(0, 5).map((d) => `${d.label}${d.issueType ? ` (=${d.issueType})` : ""} confidence=${d.confidence}`).join("\n")
+              : input.vision.message
+          }\n</photo_detector_output>`
+        : "",
       "Extract the evidence as specified.",
     ].join("\n");
     content.push({ type: "text", text: ctx });

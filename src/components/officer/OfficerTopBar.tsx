@@ -14,7 +14,7 @@ export function OfficerTopBar({ officer, mode }: { officer: SessionOfficer; mode
       <div className="flex min-w-0 items-center gap-3">
         <Link href="/officer" className="flex items-center gap-2 font-semibold tracking-tight">
           <LogoMark className="h-6 w-6" />
-          <span className="hidden sm:inline">CivicFlow</span>
+          <span className="hidden sm:inline">UrbanIQ</span>
           <span className="hidden text-muted sm:inline">/ Operations</span>
         </Link>
         {mode.demo ? (

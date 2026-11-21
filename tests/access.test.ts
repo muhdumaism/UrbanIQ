@@ -74,7 +74,8 @@ describe("access controls", () => {
     await applyCitizenUpdate(trackingTokenFor(r.id), { infoRequestId: req.id, answer: "Alder Primary School" });
     const t = await prisma.ticket.findUniqueOrThrow({ where: { id: r.ticketId! } });
     expect(t.wardCode).toBe(school.wardCode);
-    expect(t.status).toBe("NEW");
+    // A typed landmark is an approximate location, so the ticket goes to an officer for review.
+    expect(t.status).toBe("NEEDS_REVIEW");
     expect(t.needsReevaluation).toBe(true);
     expect(t.departmentId).toBe(depts.roads.id);
     expect((await prisma.report.findUniqueOrThrow({ where: { id: r.id } })).text).toContain("Pothole full of water");

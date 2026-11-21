@@ -6,7 +6,6 @@ import { processPhoto, PhotoError, MAX_PHOTO_BYTES } from "./photo";
 import { newPhotoKey, storage } from "./storage";
 import { newReportReference, sha256, trackingTokenFor } from "./tokens";
 import { enqueueTriage } from "./jobs";
-import { inCityBounds } from "./geo";
 
 export const MAX_TEXT = 4000;
 
@@ -19,6 +18,11 @@ const FieldsSchema = z
     locationConfirmed: z.enum(["true", "false"]).default("false"),
     lat: z.string().optional(),
     lng: z.string().optional(),
+    placeId: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{10,300}$/, "Invalid place selection.")
+      .optional()
+      .or(z.literal("")),
   })
   .transform((v) => ({ ...v, text: v.text.trim(), locationText: v.locationText.trim() }));
 
@@ -33,7 +37,7 @@ export type IntakeResult = { reference: string; token: string; duplicate: boolea
 
 export async function createReportFromForm(form: FormData): Promise<IntakeResult> {
   const raw = Object.fromEntries(
-    ["idempotencyKey", "text", "locationText", "locationSource", "locationConfirmed", "lat", "lng"].map((k) => [k, form.get(k)?.toString() ?? undefined]),
+    ["idempotencyKey", "text", "locationText", "locationSource", "locationConfirmed", "lat", "lng", "placeId"].map((k) => [k, form.get(k)?.toString() ?? undefined]),
   );
   const parsed = FieldsSchema.safeParse(raw);
   if (!parsed.success) {
@@ -63,9 +67,7 @@ export async function createReportFromForm(form: FormData): Promise<IntakeResult
     if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
       throw new IntakeError({ location: "That map location isn't valid. Please drop the pin again." });
     }
-    if (!inCityBounds(lat, lng)) {
-      throw new IntakeError({ location: "That point is outside Port Alder. Drop the pin inside the city or type a landmark." });
-    }
+    // Out-of-area pins are accepted and sent to officer review (never silently dropped).
   }
   const confirmed = f.locationConfirmed === "true" && lat != null;
   const source = lat != null ? (f.locationSource === "DEVICE" ? "DEVICE" : "PIN") : f.locationText ? "LANDMARK" : "NONE";
@@ -108,6 +110,7 @@ export async function createReportFromForm(form: FormData): Promise<IntakeResult
             locationText: f.locationText || null,
             locationSource: source,
             locationConfirmed: confirmed,
+            locationPlaceId: f.placeId || null,
           },
         });
         await enqueueTriage(tx, id);

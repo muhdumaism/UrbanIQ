@@ -4,10 +4,12 @@ import { z } from "zod";
 import { prisma } from "./db";
 import { canActOnTicket, type SessionOfficer } from "./auth";
 import { TriageResultSchema } from "./ai/schema";
+import { parseStoredVision } from "./vision";
 import { retryReport } from "./jobs";
 import { isHigherSeverity } from "./severity";
 import { CATEGORIES, SEVERITIES, SEVERITY_LABEL, SEVERITY_RANK, STATUS_LABEL, TICKET_STATUSES, type SeverityCode } from "./taxonomy";
-import { WARD_LIST, wardLabel } from "./geo";
+import { WARD_LIST } from "./geo";
+import { wardLabel } from "./municipality";
 
 // ───────────────────────── Queue
 
@@ -159,7 +161,8 @@ export async function getTicketDetail(id: string) {
         severity: r.severity,
         severityReason: r.severityReason,
         linkType: r.linkType,
-        location: { lat: r.lat, lng: r.lng, text: r.locationText, source: r.locationSource, confirmed: r.locationConfirmed, ward: wardLabel(r.wardCode) },
+        location: { lat: r.lat, lng: r.lng, text: r.locationText, source: r.locationSource, confirmed: r.locationConfirmed, ward: wardLabel(r.wardCode), placeId: r.locationPlaceId },
+        vision: parseStoredVision(r.vision),
         triage: tri.success ? tri.data : null,
         job: r.jobs[0] ? { status: r.jobs[0].status, attempts: r.jobs[0].attempts, lastError: r.jobs[0].lastError } : null,
       };
@@ -168,7 +171,7 @@ export async function getTicketDetail(id: string) {
       id: e.id,
       type: e.type,
       actorType: e.actorType,
-      actor: e.actorType === "OFFICER" ? (e.officer?.name ?? "Officer") : e.actorType === "CITIZEN" ? "Citizen" : "CivicFlow",
+      actor: e.actorType === "OFFICER" ? (e.officer?.name ?? "Officer") : e.actorType === "CITIZEN" ? "Citizen" : "UrbanIQ",
       visibility: e.visibility,
       publicMessage: e.publicMessage,
       note: e.note,

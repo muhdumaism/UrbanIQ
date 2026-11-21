@@ -36,6 +36,7 @@ const RULES: [string, string, string?][] = [
   ["overflowing_bin", "WASTE"],
   ["illegal_dumping", "WASTE"],
   ["missed_collection", "WASTE"],
+  ["garbage", "WASTE"],
   ["water_leak", "WATER"],
   ["no_water_supply", "WATER"],
   ["contaminated_water", "WATER"],

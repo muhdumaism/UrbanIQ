@@ -1,15 +1,11 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import type { TrackingView as View } from "@/lib/citizen";
 import { formatDateTime } from "@/lib/format";
-import { StaticCityMap } from "./StaticCityMap";
-import { EMPTY_LOCATION, type PickedLocation } from "./map/LocationPicker";
+import { MiniMap } from "./map/MiniMap";
+import { EMPTY_LOCATION, type PickedLocation } from "./map/location-types";
+import { LocationField as LocationPicker } from "./map/LocationField";
 
-const LocationPicker = dynamic(() => import("./map/LocationPicker").then((m) => m.LocationPicker), {
-  ssr: false,
-  loading: () => <div className="h-64 animate-pulse rounded-2xl bg-night" />,
-});
 
 const STEPS = [
   { key: "RECEIVED", label: "Received" },
@@ -182,7 +178,7 @@ export function TrackingView({ initial, token, link, isNew }: { initial: View; t
             {view.location.ward && <p className="text-sm text-muted">{view.location.ward}</p>}
           </div>
           {view.location.lat != null && view.location.lng != null && !editingLocation && (
-            <StaticCityMap className="h-44 w-full" pins={[{ lat: view.location.lat, lng: view.location.lng, ring: true }]} focus={{ lat: view.location.lat, lng: view.location.lng, zoom: 3 }} label={`Map showing your pin${view.location.ward ? ` in ${view.location.ward}` : ""}`} />
+            <MiniMap className="h-44 w-full" lat={view.location.lat} lng={view.location.lng} label={`Map showing your pin${view.location.ward ? ` in ${view.location.ward}` : ""}`} />
           )}
         </section>
       </div>
@@ -227,7 +223,7 @@ function InfoRequestCard({ request, token, onDone }: { request: View["infoReques
     setError("");
     const body: Record<string, unknown> = { infoRequestId: request.id };
     if (answer.trim()) body.answer = answer.trim();
-    if (pinned || loc.text.trim()) body.location = { ...(pinned ? { lat: loc.lat, lng: loc.lng } : {}), text: loc.text.trim() || undefined, source: loc.source === "DEVICE" ? "DEVICE" : pinned ? "PIN" : "LANDMARK" };
+    if (pinned || loc.text.trim()) body.location = { ...(pinned ? { lat: loc.lat, lng: loc.lng, placeId: loc.placeId ?? undefined } : {}), text: loc.text.trim() || undefined, source: loc.source === "DEVICE" ? "DEVICE" : pinned ? "PIN" : "LANDMARK" };
     try {
       const res = await fetch(`/api/track/${token}/reply`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json().catch(() => ({}));
@@ -305,7 +301,7 @@ function LocationEditor({ token, initial, onCancel, onDone }: { token: string; i
       const res = await fetch(`/api/track/${token}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ location: { ...(pinned ? { lat: loc.lat, lng: loc.lng } : {}), text: loc.text.trim() || undefined, source: loc.source === "DEVICE" ? "DEVICE" : pinned ? "PIN" : "LANDMARK" } }),
+        body: JSON.stringify({ location: { ...(pinned ? { lat: loc.lat, lng: loc.lng, placeId: loc.placeId ?? undefined } : {}), text: loc.text.trim() || undefined, source: loc.source === "DEVICE" ? "DEVICE" : pinned ? "PIN" : "LANDMARK" } }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Couldn't save the location.");

@@ -5,13 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import type { QueueRow } from "@/lib/officer";
 import { SEVERITY_LABEL, type SeverityCode } from "@/lib/taxonomy";
 import { addWardLabels, createCityMap, webglAvailable } from "../map/baseMap";
+import { PIN_STYLE, pinCss } from "./pins";
 
-const PIN: Record<SeverityCode, { bg: string; letter: string }> = {
-  CRITICAL: { bg: "#ff4d4a", letter: "C" },
-  HIGH: { bg: "#ff9a3c", letter: "H" },
-  MEDIUM: { bg: "#f5d04c", letter: "M" },
-  LOW: { bg: "#7fb4ff", letter: "L" },
-};
+const PIN = PIN_STYLE;
 
 export function OfficerMap({ rows, selectedId, hoveredId, onSelect }: { rows: QueueRow[]; selectedId: string | null; hoveredId: string | null; onSelect: (id: string) => void }) {
   const box = useRef<HTMLDivElement>(null);
@@ -95,8 +91,7 @@ export function OfficerMap({ rows, selectedId, hoveredId, onSelect }: { rows: Qu
       const sev = el.dataset.severity as SeverityCode;
       const active = id === selectedId;
       const hot = id === hoveredId;
-      const size = active ? 34 : hot ? 30 : 24;
-      el.style.cssText = `width:${size}px;height:${size}px;border-radius:9999px;background:${PIN[sev].bg};color:#0d1013;font:700 ${active ? 14 : 12}px/1 var(--font-geist-sans),sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer;border:${el.dataset.precise === "true" ? "2.5px solid #0d1013" : "2.5px dashed #0d1013"};box-shadow:${active ? "0 0 0 4px #fff, 0 0 0 9px rgba(205,235,63,.55)" : hot ? "0 0 0 3px #fff" : "0 1px 6px rgba(0,0,0,.6)"};transition:width .12s,height .12s,box-shadow .12s;`;
+      el.style.cssText = pinCss(sev, el.dataset.precise === "true", active, hot);
       marker.getElement().style.zIndex = active ? "30" : hot ? "20" : String(10 - Object.keys(PIN).indexOf(sev));
       if (active) el.setAttribute("aria-pressed", "true");
       else el.removeAttribute("aria-pressed");
@@ -111,8 +106,6 @@ export function OfficerMap({ rows, selectedId, hoveredId, onSelect }: { rows: Qu
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId, hoveredId]);
 
-  const unlocated = rows.filter((r) => r.lat == null);
-
   return (
     <div className="absolute inset-0">
       <div ref={box} className="h-full w-full" aria-label="Dark ward map with ticket pins. Pins are buttons; press Tab to move between them." role="region" />
@@ -125,27 +118,6 @@ export function OfficerMap({ rows, selectedId, hoveredId, onSelect }: { rows: Qu
           </p>
         </div>
       )}
-      <div className="pointer-events-none absolute bottom-3 left-3 flex flex-col gap-2">
-        <div className="pointer-events-auto rounded-xl bg-[#0d1013]/90 px-3 py-2.5 text-xs text-night-text ring-1 ring-night-line">
-          <p className="mb-1.5 font-medium text-white">Severity</p>
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
-            {(Object.keys(PIN) as SeverityCode[]).map((s) => (
-              <li key={s} className="flex items-center gap-1.5">
-                <span className="flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold text-[#0d1013]" style={{ background: PIN[s].bg }} aria-hidden="true">
-                  {PIN[s].letter}
-                </span>
-                {SEVERITY_LABEL[s]}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-1.5 text-[11px] text-[#97a3ae]">Dashed outline = approximate location</p>
-        </div>
-        {unlocated.length > 0 && (
-          <p className="pointer-events-auto rounded-xl bg-white px-3 py-2 text-xs font-medium text-ink shadow">
-            {unlocated.length} ticket{unlocated.length === 1 ? "" : "s"} without a map location — listed in the queue
-          </p>
-        )}
-      </div>
     </div>
   );
 }

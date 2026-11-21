@@ -14,5 +14,25 @@ services:
       test: ["CMD-SHELL", "pg_isready -U civicflow"]
       interval: 5s
       retries: 10
+  # Private CPU photo-analysis service. Not started by default (`docker compose --profile vision up -d`).
+  # Weights are mounted read-only from ./vision/models — they are NOT committed or baked into the image.
+  vision:
+    profiles: ["vision"]
+    build: ./vision
+    restart: unless-stopped
+    environment:
+      MODEL_PATH: /models/civic_guardian.pt
+      EXPECTED_SHA256: ${VISION_EXPECTED_SHA256:-11a5db9c6ad7252bcd336d6c7d84630f504683e7429f9e71d6bc7cc8af75ea81}
+      VISION_TOKEN: ${VISION_TOKEN:?set VISION_TOKEN}
+    volumes:
+      - ./vision/models:/models:ro
+    ports:
+      - "127.0.0.1:8001:8000" # loopback only; in production expose on the private network only
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2g
+
 volumes:
   civicflow-db:

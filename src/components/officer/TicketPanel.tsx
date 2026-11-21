@@ -6,7 +6,9 @@ import type { SessionOfficer } from "@/lib/auth";
 import { CATEGORY_LABEL, SEVERITIES, SEVERITY_LABEL, subtypeLabel, type CategoryCode, type SeverityCode, type TicketStatusCode } from "@/lib/taxonomy";
 import { formatDateTime, timeAgoLong } from "@/lib/format";
 import { SampleTag, SeverityBadge, StatusBadge } from "../Badges";
-import { StaticCityMap } from "../StaticCityMap";
+import { MiniMap } from "../map/MiniMap";
+import { PhotoWithDetections, VisionSummary } from "./VisionEvidence";
+import { GooglePlaceName } from "../map/GooglePlaceName";
 
 type Detail = TicketDetail & { canAct: boolean };
 type FormKind = "assign" | "severity" | "request" | "resolve" | "note" | "public" | "reopen" | null;
@@ -282,7 +284,7 @@ export function TicketPanel({ id, onClose, onChanged, officer, standalone = fals
               <p className="mt-1 font-medium">{t.department ?? <span className="text-crit">Not assigned</span>}</p>
             </div>
           </div>
-          {t.lat != null && t.lng != null && <StaticCityMap className="h-40 w-full" pins={[{ lat: t.lat, lng: t.lng, ring: true, color: "#cdeb3f" }]} focus={{ lat: t.lat, lng: t.lng, zoom: 3.2 }} label={`Ticket location in ${t.ward ?? "Port Alder"}`} />}
+          {t.lat != null && t.lng != null && <MiniMap lat={t.lat} lng={t.lng} label={`Ticket location in ${t.ward ?? "Port Alder"}`} />}
         </section>
 
         {/* Info requests */}
@@ -379,16 +381,12 @@ function ReportCard({ r, canAct, busy, onRetry }: { r: TicketDetail["reports"][n
           {r.text ? <blockquote className="mt-1 border-l-2 border-line-strong pl-3 text-[15px]">{r.text}</blockquote> : <p className="mt-1 text-muted">No text — photo only.</p>}
           <p className="mt-1 text-xs text-muted">
             Location given: {r.location.lat != null ? `${r.location.confirmed ? "confirmed" : "unconfirmed"} ${r.location.source === "DEVICE" ? "device location" : "pin"}` : "no pin"}
-            {r.location.text ? ` · “${r.location.text}”` : ""}
+            {r.location.text ? ` · citizen wrote “${r.location.text}”` : ""}
           </p>
+          {r.location.placeId && <GooglePlaceName placeId={r.location.placeId} />}
         </div>
-        {r.photoUrl && (
-          <a href={r.photoUrl} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-lg border border-line">
-            {/* Served by an authenticated route; never public. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={r.photoUrl} alt={`Photo submitted with ${r.reference}`} className="max-h-72 w-full bg-paper object-contain" loading="lazy" />
-          </a>
-        )}
+        {r.photoUrl && <PhotoWithDetections src={r.photoUrl} alt={`Photo submitted with ${r.reference}`} vision={r.vision} />}
+        <VisionSummary vision={r.vision} />
         {tri && (
           <div className="grid gap-3 sm:grid-cols-2">
             <EvidenceList title="What the citizen reported" items={tri.citizen_facts} empty="No text provided." />

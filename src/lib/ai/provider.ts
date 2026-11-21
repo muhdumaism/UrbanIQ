@@ -1,4 +1,5 @@
 import type { TriageResult } from "./schema";
+import type { VisionEvidence } from "../vision";
 
 export type TriageInput = {
   text: string | null;
@@ -6,6 +7,8 @@ export type TriageInput = {
   locationText: string | null;
   /** Ward resolved from a confirmed pin, if any (context only). */
   wardName: string | null;
+  /** Advisory detector output for the photo (null when not run). */
+  vision?: VisionEvidence | null;
 };
 
 export type TriageOutput = { result: TriageResult; provider: string };

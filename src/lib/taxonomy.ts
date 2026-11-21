@@ -32,6 +32,7 @@ export const SUBTYPES = {
   overflowing_bin: { category: "WASTE", label: "Overflowing bin" },
   illegal_dumping: { category: "WASTE", label: "Illegal dumping" },
   missed_collection: { category: "WASTE", label: "Missed collection" },
+  garbage: { category: "WASTE", label: "Garbage / litter" },
   water_leak: { category: "WATER_SUPPLY", label: "Water supply leak" },
   no_water_supply: { category: "WATER_SUPPLY", label: "No water supply" },
   contaminated_water: { category: "WATER_SUPPLY", label: "Contaminated water" },
