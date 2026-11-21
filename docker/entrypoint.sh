@@ -1,11 +1,13 @@
 #!/bin/sh
-# Usage: web (default) | worker | migrate | seed
+# Usage: web (default) | worker | migrate | seed | create-officer --email … --name … --role … [--department CODE]
 set -e
 cd /app
 
 migrate() {
   echo "[urbaniq] applying database migrations"
   npx prisma migrate deploy
+  # Departments + default routing rules (idempotent; never overwrites admin edits).
+  npx tsx prisma/seed-base.ts
 }
 
 case "${1:-web}" in
@@ -26,6 +28,10 @@ case "${1:-web}" in
   seed)
     migrate
     exec npx tsx prisma/seed.ts
+    ;;
+  create-officer)
+    shift
+    exec npx tsx scripts/create-officer.ts "$@"
     ;;
   *)
     exec "$@"

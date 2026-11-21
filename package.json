@@ -14,6 +14,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:setup": "tsx prisma/seed-base.ts",
+    "officer:create": "tsx scripts/create-officer.ts",
     "db:reset": "prisma migrate reset --force --skip-seed && tsx prisma/seed.ts",
     "geo:generate": "tsx scripts/generate-geo.ts"
   },

@@ -234,6 +234,20 @@ UrbanIQ ships a production [`Dockerfile`](Dockerfile) and a [`docker-compose.dok
 3. Mount a volume at `/app/storage` (private photo uploads), or set `STORAGE_DRIVER=s3` and the `S3_*` variables.
 4. Add a domain on port 3000.
 
+**Going live (real officers instead of demo accounts)**
+
+Set `CIVICFLOW_MODE=live` and `SEED_DEMO_DATA=false`, then open the app container's terminal in Dokploy and run:
+
+```bash
+/app/docker/entrypoint.sh create-officer --email ana@city.gov --name "Ana Diaz" --role SUPERVISOR --password 'a-long-password'
+```
+
+```bash
+/app/docker/entrypoint.sh create-officer --email sam@city.gov --name "Sam Lee" --role OFFICER --department ROADS --password 'another-long-password'
+```
+
+Department codes are `ROADS`, `WASTE`, `WATER`, `LIGHTS`, `ELEC`, `TREES`, `DRAIN`, `SEWER` and `HARBOUR`. Departments and default routing rules are created automatically on every start; the step is idempotent. To change them, edit `prisma/reference-data.ts`.
+
 **What the container does on start**
 
 * Runs `prisma migrate deploy`, unless `RUN_MIGRATIONS=false`.
